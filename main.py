@@ -1,7 +1,7 @@
 import os, pygame as pg
-from typing import List
+from typing import Iterable, List
 from pygame import Rect
-from pygame.sprite import Group, Sprite, groupcollide
+from pygame.sprite import Group, LayeredUpdates, Sprite
 
 
 WHITE = (255, 255, 255)
@@ -43,71 +43,82 @@ class Movable:
     direction: int
     rect: Rect
     blocked: List[bool]
+
     def move(self, speed=None, direction=None, forced=False):
         if speed is None:
             speed = self.speed
+
         if direction is None:
             direction = self.direction
 
-        blocked = (False,) * 4
+        if not forced and hasattr(self, 'blocked'):
+            blocked = self.blocked
+        else:
+            blocked = (False,) * 4
+
+        if (game_iteration * speed) % 60 != 0 or blocked[direction]:
+            return
 
         step = [(0,-1),(1,0),(0,1),(-1,0)][direction]
-        
-        for _ in range(speed):
-            if not forced and hasattr(self, 'blocked'):
-                coll_man.collide_all()
-                blocked = self.blocked
-            if blocked[direction]:
-                return
-            self.rect.move_ip(step)
+        self.rect.move_ip(step)
+
+    def jump(self, dist=None, direction=None):
+        if dist is None:
+            dist = self.speed
+
+        if direction is None:
+            direction = self.direction
+
+        step = [(0,-dist),(dist,0),(0,dist),(-dist,0)][direction]
+        self.rect.move_ip(step)
 
 
 class Tank(pg.sprite.Sprite, Movable):
     def __init__(self, point, speed, delay, direction=UP):
-        super().__init__(active_group)
+        super().__init__(active)
         self.images = [
             img_rotations(tank_ylw_img),
             img_rotations(tank_grn_img)
         ]
-        self.tacts_counter = TactsCounter(count=2, tact_length=5)
+        self.anim_tacts_counter = TactsCounter(count=2, tact_length=5)
         self.direction = direction
         self.rect = self.image.get_rect()
         self.rect.center = point
         self.speed = speed
-        self.shooting_delayer = TactsCounter(count=delay, tact_length=1, cycled=False)
+        self.shooting_delayer = TactsCounter(count=delay, cycled=False)
         self.controls = [pg.K_UP, pg.K_RIGHT, pg.K_DOWN, pg.K_LEFT, pg.K_SPACE]
         self.collisions = []
-        # self.blocked = [False] * 4
+        self.blocked = [False] * 4
 
     @property
     def image(self):
-        return self.images[self.tacts_counter.tact][self.direction]
+        return self.images[self.anim_tacts_counter.tact][self.direction]
 
     def update(self):
         super().update()
-        # self.get_collided()
+        self.get_collided()
         self.shooting_delayer.update()
 
     def move(self):
         super().move()
-        self.tacts_counter.update()
+        self.anim_tacts_counter.update()
     
     def fire(self):
         if self.shooting_delayer.stopped:
-            Bullet(self.rect.center, 5, self.direction).move(9)
+            Bullet(self.rect.center, 5, self.direction).jump(9)
             self.shooting_delayer.reset()
 
-    @property
-    def blocked(self):
-        blocked = [False] * 4
+    def get_collided(self):
+        self.blocked = [False] * 4
         for other in self.collisions:
+            if not issolid(other):
+                continue
             pressure = pressure_force(self.rect, other.rect)
             if pressure is None:
                 continue
-            blocked[pressure] = True
-            if all(blocked):
+            self.blocked[pressure] = True
+            if all(self.blocked):
                 break
-        return blocked
 
 
 class Player(Tank):
@@ -129,7 +140,7 @@ class Player(Tank):
 
 class Bullet(pg.sprite.Sprite, Movable):
     def __init__(self, point, speed, direction):
-        super().__init__(active_group)
+        super().__init__(active)
         self.direction = direction
         self.image = pg.transform.rotate(
             bullet_img,
@@ -138,12 +149,12 @@ class Bullet(pg.sprite.Sprite, Movable):
         self.rect = self.image.get_rect()
         self.rect.center = point
         self.speed = speed
-        self.timer = TactsCounter(count=12, tact_length=1, cycled=False)
+        self.timer = TactsCounter(count=12, cycled=False)
         self.collisions = []
 
     def update(self):
         self.move()
-        if len(self.collisions) != 0:
+        if len(self.collisions) != 0 and any(issolid(e) for e in self.collisions):
             self.kill()
             Boom(self.rect.center)
         if self.timer.stopped:
@@ -151,22 +162,22 @@ class Bullet(pg.sprite.Sprite, Movable):
             return
         self.timer.update()
 
-    @property
-    def blocked(self):
-        blocked = [False] * 4
-        for other in self.collisions:
-            pressure = pressure_force(self.rect, other.rect)
-            if pressure is None:
-                continue
-            blocked[pressure] = True
-            if all(blocked):
-                break
-        return blocked
+    # @property
+    # def blocked(self):
+    #     blocked = [False] * 4
+    #     for other in self.collisions:
+    #         pressure = pressure_force(self.rect, other.rect)
+    #         if pressure is None:
+    #             continue
+    #         blocked[pressure] = True
+    #         if all(blocked):
+    #             break
+    #     return blocked
 
 
 class Boom(Sprite):
     def __init__(self, point):
-        super().__init__(environment_group)
+        super().__init__(effects)
 
         self.images = [exp1_img, exp2_img, exp3_img]
         self.rect = exp1_img.get_rect()
@@ -175,7 +186,6 @@ class Boom(Sprite):
     
     @property
     def image(self):
-        # self.rect = self.images[self.timer.tact].get_rect()
         return self.images[self.timer.tact % len(self.images)]
 
     def update(self):
@@ -187,17 +197,14 @@ class Boom(Sprite):
 
 class Tile(Sprite):
     def __init__(self):
-        super().__init__(environment_group)
+        super().__init__(environment)
         self.image = bricks_img
         self.rect = self.image.get_rect()
         self.rect.center = (500, 300)
         self.walkable = False
 
-    def get_collided(self, others):
-        print(f'{type(self)} with {[type(e) for e in others]}')
 
-
-class CollisionsManager:
+'''class CollisionsManager:
     def collide_all(self):
         for group in active_group, environment_group:
             for e in group:
@@ -209,7 +216,48 @@ class CollisionsManager:
 
             for e in collisions:
                 if hasattr(e, 'collisions'):
-                    e.collisions = collisions[e]
+                    e.collisions = collisions[e]'''
+class CollisionsManager:
+    # def collide_groups(self, active, passive):
+    #     for i in range(len(active)):
+    #         collisions = (active.get_sprite(i).rect
+    #             .collidelistall([active.get_sprite(j).rect
+    #                              for j in range((i+1), len(active))]))
+    #         for j in collisions:
+    #             self.collide_two(active.get_sprite(i),
+    #                              active.get_sprite((i+1)+j))
+
+    #         collisions = (active.get_sprite(i).rect
+    #             .collidelistall([e.rect for e in passive]))
+    #         for j in collisions:
+    #             self.collide_two(active.get_sprite(i),
+    #                              passive.get_sprite(j))
+
+    def collide_groups(self, active: Iterable[LayeredUpdates], passive: Iterable[LayeredUpdates]):
+        active = [e for group in active for e in group]
+        passive = [e for group in passive for e in group]
+        for i in range(len(active)):
+            collisions = (active[i].rect
+                .collidelistall([active[j].rect
+                                 for j in range((i+1), len(active))]))
+            for j in collisions:
+                self.collide_two(active[i], active[(i+1)+j])
+
+            collisions = (active[i].rect
+                .collidelistall([e.rect for e in passive]))
+            for j in collisions:
+                self.collide_two(active[i], passive[j])
+
+    def invalidate_collisions(self, *groups):
+        for group in groups:
+            for e in group:
+                if hasattr(e, 'collisions'):
+                    e.collisions = []
+
+    def collide_two(self, a, b):
+        for x, y in (a, b), (b, a):
+            if hasattr(x, 'collisions'):
+                x.collisions.append(y)
 
 
 def img_rotations(img):
@@ -219,15 +267,19 @@ def img_rotations(img):
             pg.transform.rotate(img, 90))
 
 
-def pressure_force(a: Rect, b: Rect):
-    if -5 <= a.left - b.right <= 5:
+def pressure_force(presser: Rect, pressed: Rect):
+    if -1 <= presser.left - pressed.right <= 1:
         return LEFT
-    if -5 <= a.right - b.left <= 5:
+    if -1 <= presser.right - pressed.left <= 1:
         return RIGHT
-    if -5 <= a.bottom - b.top <= 5:
+    if -1 <= presser.bottom - pressed.top <= 1:
         return DOWN
-    if -5 <= a.top - b.bottom <= 5:
+    if -1 <= presser.top - pressed.bottom <= 1:
         return UP
+
+
+def issolid(obj: Sprite):
+    return obj in active or (obj in environment and not obj.walkable)
 
 
 pg.init()
@@ -254,28 +306,50 @@ exp1_img = pg.Surface.subsurface(all_images, (0,80,32,32))
 exp2_img = pg.Surface.subsurface(all_images, (32,80,32,32))
 exp3_img = pg.Surface.subsurface(all_images, (64,80,32,32))
 
-active_group = pg.sprite.Group()
-environment_group = pg.sprite.Group()
+active = LayeredUpdates()
+environment = LayeredUpdates()
+effects = LayeredUpdates()
+
 coll_man = CollisionsManager()
 
+# player = Player((400, 300), speed=42, direction=RIGHT)
+# player = Player((400, 300), speed=30, direction=RIGHT)
+# player = Player((400, 300), speed=14, direction=RIGHT)
 player = Player((400, 300), speed=9, direction=RIGHT)
+player = Player((400, 300), speed=5, direction=RIGHT)
+player = Player((400, 300), speed=4, direction=RIGHT)
+# player = Player((400, 300), speed=3.5, direction=RIGHT)
+player = Player((400, 300), speed=3, direction=RIGHT)
+# player = Player((400, 300), speed=2.5, direction=RIGHT)
+player = Player((400, 300), speed=2, direction=RIGHT)
+# player = Player((400, 300), speed=1.5, direction=RIGHT)
+player = Player((400, 300), speed=1, direction=RIGHT)
 Tile()
+
+#НОК(1,..,6) = 60
+game_iteration = 0
 while True:
-    clock.tick(30)
+    clock.tick(30*1600)
     keystate = pg.key.get_pressed()
 
     events = pg.event.get()
     if any(event.type == pg.QUIT for event in events):
         break
 
-    active_group.update()
-    environment_group.update()
-    # coll_finder.collide_all()
+    environment.update()
+    active.update()
+    effects.update()
+
+    coll_man.invalidate_collisions(active, environment, effects)
+    coll_man.collide_groups((active,), (environment, effects))
 
     screen.fill(BLACK)
-    active_group.draw(screen)
-    environment_group.draw(screen)
+    environment.draw(screen)
+    active.draw(screen)
+    effects.draw(screen)
 
     pg.display.flip()
+
+    game_iteration += 1
 
 pg.quit()
