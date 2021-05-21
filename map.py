@@ -1,3 +1,4 @@
+from typing import Counter
 from pygame import Rect
 from pygame.sprite import Sprite
 from constants import scale, screen_size
@@ -49,8 +50,14 @@ class Map:
     def get_content(self, cells, excluding=(None,)):
         return {self.cells[x][y] for x, y in cells if self.cells[x][y] not in excluding}
 
+    def count_content(self, cells, excluding=(None,)):
+        return Counter(self.cells[x][y] for x, y in cells if self.cells[x][y] not in excluding)
+
     def get_rect_content(self, rect: Rect, excluding=(None,)):
         return self.get_content(self.get_rect_cells(rect), excluding)
+
+    def count_rect_content(self, rect: Rect, excluding=(None,)):
+        return self.count_content(self.get_rect_cells(rect), excluding)
 
     def get_rect_cells(self, rect: Rect):
         'Построчно возвращает клетки, соответствующие прямоугольнику'

@@ -13,6 +13,11 @@ GREEN = (0, 255, 0)
 BLUE = (0, 0, 255)
 
 
+NONE = 0
+PLAYERS = 1
+ENEMIES = 2
+
+
 (UP, RIGHT, DOWN, LEFT, FIRE) = range(5)
 
 
@@ -29,14 +34,6 @@ class Movable:
 
         if direction is None:
             direction = self.direction
-
-        # if not forced and hasattr(self, 'blocked'):
-        #     blocked = self.blocked
-        # else:
-        #     blocked = (False,) * 4
-
-        # if blocked[direction]:
-        #     return
 
         step = jump((0,0), 1, direction)
 
@@ -62,25 +59,27 @@ class Movable:
 
 
 class Tank(pg.sprite.Sprite, Movable):
-    def __init__(self, point, speed, delay, direction=UP):
+    def __init__(self, team, point, speed, delay, health, direction, damage):
         super().__init__(active)
         self.images = [
             img_rotations(tank_ylw_img),
             img_rotations(tank_grn_img)
         ]
         self.anim_tacts_counter = TactsCounter(count=2, tact_length=5)
+
         self.direction = direction
         self.rect = self.image.get_rect()
         self.rect.center = point
         self.speed = speed
+        self.health = health
+        self.team = team
+        self.damage = damage
+
         self.shooting_delayer = TactsCounter(count=delay, cycled=False)
-        self.controls = [pg.K_UP, pg.K_RIGHT, pg.K_DOWN, pg.K_LEFT, pg.K_SPACE]
-        # self.collisions = []
-        # self.blocked = [False] * 4
+        self.controls = [False] * 5
         if len(map.place(self)) > 0:
-            Boom(self.rect.center)
+            Boom(NONE, self.rect.center, 0)
             self.kill()
-            # raise Exception("Tank placed over other object")
 
     @property
     def image(self):
@@ -88,8 +87,21 @@ class Tank(pg.sprite.Sprite, Movable):
 
     def update(self):
         super().update()
-        # self.get_collided()
+        if self.health <= 0:
+            self.kill()
+            map.outdate(self.rect, (self,))
+            return
+
         self.shooting_delayer.update()
+
+        for dir in UP, RIGHT, DOWN, LEFT:
+            if self.controls[dir]:
+                self.direction = dir
+                self.move()
+                break
+
+        if self.controls[FIRE]:
+            self.fire()
 
     def move(self):
         super().move()
@@ -97,44 +109,30 @@ class Tank(pg.sprite.Sprite, Movable):
     
     def fire(self):
         if self.shooting_delayer.stopped:
-            Bullet(jump(self.rect.center, 10*scale, self.direction), 5, self.direction)
+            Bullet(self.team, jump(self.rect.center, 10*scale, self.direction), 5, self.direction, self.damage)
             self.shooting_delayer.reset()
 
     def collide(self, *others):
         pass
-    # def get_collided(self):
-    #     self.blocked = [False] * 4
-    #     for other in self.collisions:
-    #         if not issolid(other):
-    #             continue
-    #         pressure = pressure_force(self.rect, other.rect)
-    #         if pressure is None:
-    #             continue
-    #         self.blocked[pressure] = True
-    #         if all(self.blocked):
-    #             break
+
+    def get_harmed(self, *others):
+        for e in others:
+            self.health -= e.damage
 
 
-class Player(Tank):
-    def __init__(self, point, speed=4, delay=20, direction=UP):
-        Tank.__init__(self, point, speed, delay, direction)
+class Player:
+    def __init__(self, tank, buttons):
+        self.tank = tank
+        self.buttons = buttons
 
     def update(self):
-        super().update()
-
-        for dir in UP, RIGHT, DOWN, LEFT:
-            if keystate[self.controls[dir]]:
-                self.direction = dir
-                self.move()
-                break
-
-        if keystate[self.controls[FIRE]]:
-            self.fire()
+        self.tank.controls = [keystate[e] for e in self.buttons]
 
 
 class Bullet(pg.sprite.Sprite, Movable):
-    def __init__(self, point, speed, direction):
+    def __init__(self, team, point, speed, direction, damage):
         super().__init__(active)
+        self.team = team
         self.direction = direction
         self.image = pg.transform.rotate(
             bullet_img,
@@ -143,13 +141,12 @@ class Bullet(pg.sprite.Sprite, Movable):
         self.rect = self.image.get_rect()
         self.rect.center = point
         self.speed = speed
+        self.damage = damage
         self.timer = TactsCounter(count=36, cycled=False)
-        # self.collisions = []
 
         extra = map.place(self)
         if len(extra) > 0:
             self.collide(*extra)
-            # self.collisions.extend(extra)
 
     def update(self):
         self.move()
@@ -157,34 +154,56 @@ class Bullet(pg.sprite.Sprite, Movable):
             map.outdate(self.rect, (self,))
             self.kill()
             return
-        # self.collisions = []
         self.timer.update()
 
     def collide(self, *others):
-        if len(others) != 0: # and any(issolid(e) for e in others):
+        if len(others) != 0:
             map.outdate(self.rect, (self,))
             self.kill()
-            Boom(self.rect.center)
+            Boom(self.team, self.rect.center, self.damage)
+    
+    get_harmed = collide
 
 
 class Boom(Sprite):
-    def __init__(self, point):
+    def __init__(self, team, point, total_damage):
         super().__init__(effects)
         effects.move_to_back(self)
 
         self.images = [exp1_img, exp2_img, exp3_img]
-        self.rect = exp1_img.get_rect()
-        self.rect.center = point
+        self.rects = []
+        for e in self.images:
+            rect = e.get_rect()
+            rect.center = point
+            self.rects.append(rect)
+
+        self.team = team
         self.timer = TactsCounter(count=len(self.images)+1, tact_length=12, cycled=False)
-    
+        self.total_damage = total_damage
+
     @property
     def image(self):
         return self.images[self.timer.tact % len(self.images)]
+
+    @property
+    def rect(self):
+        return self.rects[self.timer.tact % len(self.rects)]
+
+    @property
+    def square(self):
+        return self.rect.size[0] * self.rect.size[1] / (scale * scale)
+
+    @property
+    def damage(self):
+        return self.total_damage / (self.timer.count * self.square)
 
     def update(self):
         if self.timer.stopped:
             self.kill()
             return
+        for e, times in map.count_rect_content(self.rect).items():
+            if not hasattr(e, 'team') or e.team != self.team:
+                e.get_harmed(*(self for _ in range(times)))
         self.timer.update()
 
 
@@ -194,9 +213,19 @@ class Tile(Sprite):
         self.image = bricks_img
         self.rect = self.image.get_rect()
         self.rect.center = (500, 300)
+        self.health = 100
         self.walkable = False
         if len(map.place(self)) > 0:
             pass
+
+    def update(self):
+        if self.health < 0:
+            map.outdate(self.rect, (self,))
+            self.kill()
+
+    def get_harmed(self, *others):
+        for e in others:
+            self.health -= e.damage
 
 
 def img_rotations(img):
@@ -206,7 +235,7 @@ def img_rotations(img):
             pg.transform.rotate(img, 90))
 
 
-def pressure_force(presser: Rect, pressed: Rect):
+def pressure_dir(presser: Rect, pressed: Rect):
     if -1 <= presser.left - pressed.right <= 1:
         return LEFT
     if -1 <= presser.right - pressed.left <= 1:
@@ -242,8 +271,14 @@ effects = LayeredUpdates()
 
 map = Map()
 
-player = Player((400, 300), speed=2, direction=RIGHT)
+player_tank = Tank(PLAYERS, (400, 300), speed=2, delay=20, health=100, direction=RIGHT, damage=50)
+player_buttons = [pg.K_UP, pg.K_RIGHT, pg.K_DOWN, pg.K_LEFT, pg.K_SPACE]
+player = Player(player_tank, player_buttons)
+
 Tile()
+
+Tank(ENEMIES, (440, 300), speed=1, delay=20, health=2000, direction=DOWN, damage=50).controls = [0, 0, 0, 0, 0]
+Tank(ENEMIES, (440, 350), speed=1, delay=20, health=302, direction=DOWN, damage=50).controls = [0, 0, 0, 0, 0]
 
 game_iteration = 0
 while True:
@@ -254,6 +289,7 @@ while True:
     if any(event.type == pg.QUIT for event in events):
         break
 
+    player.update()
 
     environment.update()
     active.update()
