@@ -1,6 +1,13 @@
+import os as _os
+
 screen_size = (800, 600)
 scale = 2.5
 fps = 30
+
+
+game_folder = _os.path.dirname(__file__)
+img_folder = _os.path.join(game_folder, 'images')
+img_path = _os.path.join(img_folder, 'sprites.gif')
 
 
 WHITE = (255, 255, 255)

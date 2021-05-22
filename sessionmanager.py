@@ -4,7 +4,7 @@ import pygame as pg
 from pygame.sprite import Sprite, Group, LayeredUpdates
 from map import Map
 from objects import Tank, Projectile, Tile, Explosion, jump
-from constants import ENEMIES, PLAYERS, scale
+from constants import ENEMIES, PLAYERS, RIGHT, scale
 from controllers import AI, Player
 
 
@@ -56,5 +56,11 @@ class SessionManager:
         for g in self.environment, self.active, self.effects:
             g.draw(surface)
 
-    def parse_map(self, str_map):
-        pass
+    # def parse_map(self, str_map, above_existing=False):
+    #     if not above_existing:
+    #         pass
+    #     square_size = 13
+    #     str_map = str_map.split('\n')
+
+    #     for x in range(self._map.size[0]):
+    #         for y in range(self._map.size[1]):

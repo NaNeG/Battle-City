@@ -1,5 +1,4 @@
 import pygame as pg
-from map import Map
 from constants import *
 
 
@@ -7,12 +6,8 @@ pg.init()
 pg.display.set_caption("Battle City")
 screen = pg.display.set_mode(screen_size)
 
-# цепочка импортов:
-# sessionmanager, objects, images, где вызывается .convert_alpha
-# из-за чего display.set_mode должен быть выполнен до импорта ниже;
-# иначе ошибка: `pygame.error: cannot convert without pygame.display initialized`
-
 from sessionmanager import SessionManager
+from map import Map
 
 clock = pg.time.Clock()
 map = Map()

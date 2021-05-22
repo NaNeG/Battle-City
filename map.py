@@ -1,7 +1,9 @@
-from typing import Counter
+from objects import Wall
+from typing import Counter, Union
 from pygame import Rect
 from pygame.sprite import Sprite
 from constants import scale, screen_size
+
 
 class Map:
     def __init__(self, cell_size=scale, screen_size=screen_size):
@@ -11,7 +13,7 @@ class Map:
         self.size = (round(screen_size[0] // cell_size + 1),
                      round(screen_size[1] // cell_size + 1))
 
-        self.cells: self.cells["x"]["y"] = [[None]*(self.size[1]) for _ in range(self.size[0])]
+        self.cells = [[None]*(self.size[1]) for _ in range(self.size[0])]
 
     def place(self, obj: Sprite, rect: Rect=None, onempty=True):
         return self.replace(obj, rect, (None,) if onempty else ())
@@ -19,7 +21,7 @@ class Map:
     def outdate(self, rect: Rect, expected=()):
         return self.replace(None, rect, expected)
 
-    def replace(self, obj: "Sprite | None", rect: Rect=None, to_be_replaced=()):
+    def replace(self, obj: Union[Sprite, None], rect: Rect=None, to_be_replaced=()):
         if rect is None:
             rect = obj.rect
         cells = self.get_rect_cells(rect)
@@ -48,10 +50,10 @@ class Map:
         return MoveResult(obj, extra_while_outdating, bumped_while_placing)
 
     def get_content(self, cells, excluding=(None,)):
-        return {self.cells[x][y] for x, y in cells if self.cells[x][y] not in excluding}
+        return {self.get_cell(x,y) for x, y in cells if self.get_cell(x,y) not in excluding}
 
     def count_content(self, cells, excluding=(None,)):
-        return Counter(self.cells[x][y] for x, y in cells if self.cells[x][y] not in excluding)
+        return Counter(self.get_cell(x,y) for x, y in cells if self.get_cell(x,y) not in excluding)
 
     def get_rect_content(self, rect: Rect, excluding=(None,)):
         return self.get_content(self.get_rect_cells(rect), excluding)
@@ -63,6 +65,9 @@ class Map:
         'Построчно возвращает клетки, соответствующие прямоугольнику'
         t, l, b, r = (round(e / self.cell_size) for e in (rect.top, rect.left, rect.bottom, rect.right))
         return [(x, y) for y in range(t, b+1) for x in range(l, r+1)]
+
+    def get_cell(self, x, y):
+        return self.cells[x][y] if 0 <= x < self.size[0] and 0 <= y < self.size[1] else Wall
 
     def __repr__(self):
         def r(obj):

@@ -9,6 +9,9 @@ from constants import *
 __all__ = ['Movable', 'Tank', 'Projectile', 'Explosion', 'jump']
 
 
+Wall = object()
+
+
 class Movable:
     speed: float
     direction: int
@@ -198,7 +201,7 @@ class Explosion(Sprite):
             self.kill()
             return
         for e, times in self._sm.count_rect_content(self.rect).items():
-            if not hasattr(e, 'team') or e.team != self.team:
+            if (not hasattr(e, 'team') or e.team != self.team) and e is not Wall:
                 e.get_harmed(*(self for _ in range(times)))
         self.timer.update()
 
@@ -225,7 +228,7 @@ class Tile(Sprite):
 
 
 def issolid(obj: Sprite):
-    return isinstance(obj, (Tank, Projectile, Tile))
+    return isinstance(obj, (Tank, Projectile, Tile)) or obj is Wall
 
 
 def jump(coords: Tuple[int, int], dist, direction):
