@@ -26,9 +26,9 @@ red_bricks_img = get_img(56,64,8,8, scale)
 concrete_img = get_img(48,72,8,8, scale)
 leaves_img = get_img(56,72,8,8, scale)
 
-exp1_img = get_img(0,80,32,32, scale)
-exp2_img = get_img(32,80,32,32, scale)
-exp3_img = get_img(64,80,32,32, scale)
+exp1_img = get_img(10,92,11,10, scale)
+exp2_img = get_img(40,91,15,13, scale)
+exp3_img = get_img(64,81,32,29, scale)
 
 
 def img_rotations(img):
