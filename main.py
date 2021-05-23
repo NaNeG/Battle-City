@@ -18,7 +18,8 @@ enemy = sm.create_ai_tank(sm.enemies, (440, 330), speed=1, delay=20, health=100,
 enemy2 = sm.create_ai_tank(sm.enemies, (440, 400), speed=1, delay=20, health=100, direction=DOWN, damage=400)
 doommed_guy = sm.create_ai_tank(sm.enemies, (440, 330), speed=1, delay=20, health=100, direction=DOWN, damage=400)
 
-# tile = sm.create_base(100)
+tile = sm.create_base(10)
+b = sm.create_bonus((500, 500), REPAIR_FORTRESS)
 
 game_iteration = 0
 while True:

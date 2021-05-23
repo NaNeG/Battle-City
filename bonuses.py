@@ -1,17 +1,17 @@
 from objects import Tank, Wall
-from constants import ENEMIES, PLAYERS
 from pygame.sprite import Sprite
 from images import star_bonus_img, dark_bonus_img
 from tactscounter import TactsCounter
 
 
 class BonusObj(Sprite):
-    def __init__(self, point, type, session_manager):
+    def __init__(self, point, type, group, session_manager):
+        super().__init__(group)
         self.images = [star_bonus_img, dark_bonus_img]
         self.rect = self.images[0].get_rect()
         self.rect.center = point
         self.anim_tacts_counter = TactsCounter(count=2, tact_length=5)
-        self.timer = TactsCounter(count=12, cycled=False)
+        self.timer = TactsCounter(count=200, cycled=False)
         self.type = type
         self._sm = session_manager
 
@@ -28,6 +28,8 @@ class BonusObj(Sprite):
             (best_pretendent, _), = best_pretendent
             self.kill()
             self._sm.set_bonus(best_pretendent, self.type)
+        self.anim_tacts_counter.update()
+        self.timer.update()
 
 
 # class Bonus:

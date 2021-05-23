@@ -4,7 +4,8 @@ import pygame as pg
 from pygame.sprite import Sprite, Group, LayeredUpdates
 from map import Map
 from objects import Tank, Projectile, Tile, Explosion, jump
-from constants import DESTROY_ENEMIES, ENEMIES, EXTRA_LIFE, PLAYERS, POWER_UP, REPAIR_FORTRESS, RIGHT, SHIELD, scale
+from bonuses import BonusObj
+from constants import DESTROY_ENEMIES, HEALING, POWER_UP, REPAIR_FORTRESS, RIGHT, SHIELD, scale
 from controllers import AI, Player
 from teams import Team
 
@@ -61,6 +62,9 @@ class SessionManager:
         self.players.base = self.create_tile(health, self.players)
         return self.players.base
 
+    def create_bonus(self, point, type):
+        return BonusObj(point, type, self.effects, self)
+
     def set_bonus(self, aim, bonus):
         if bonus == SHIELD:
             pass
@@ -68,10 +72,11 @@ class SessionManager:
             if aim.team == self.players:
                 self.enemies.kill()
         if bonus == REPAIR_FORTRESS:
-            pass
+            if aim.team == self.players and self.players.base is not None:
+                self.players.base.health = 100
         if bonus == POWER_UP:
             pass
-        if bonus == EXTRA_LIFE:
+        if bonus == HEALING:
             pass
 
     def update(self, keystate):
