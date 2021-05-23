@@ -71,7 +71,6 @@ class Tank(Sprite, Movable):
         self.shooting_delayer = TactsCounter(count=delay, cycled=False)
         self.controls = [False] * 5
         if len(self._sm.place(self)) > 0:
-            self._sm.create_explosion(None, self.rect.center, 0, 6)
             self.kill()
 
     @property
@@ -82,8 +81,6 @@ class Tank(Sprite, Movable):
         super().update()
         if self.health <= 0:
             self.kill()
-            self._sm.outdate(self.rect, (self,))
-            self._sm.create_explosion(None, self.rect.center, 0, 6)
             return
 
         self.shooting_delayer.update()
@@ -113,6 +110,12 @@ class Tank(Sprite, Movable):
         for e in others:
             self.health -= e.damage
 
+    def kill(self):
+        self.health = 0
+        super().kill()
+        self._sm.outdate(self.rect, (self,))
+        self._sm.create_explosion(None, self.rect.center, 0, 6)
+
 
 class Projectile(Sprite, Movable):
     def __init__(self, team, point, speed, direction, damage, group, session_manager):
@@ -128,7 +131,6 @@ class Projectile(Sprite, Movable):
         self.speed = speed
         self.damage = damage
         self.health = 15
-        self.timer = TactsCounter(count=36, cycled=False)
         self._sm = session_manager
 
         extra = session_manager.place(self)
@@ -137,13 +139,8 @@ class Projectile(Sprite, Movable):
 
     def update(self):
         if self.health <= 0:
-            self.explode()
-        self.move()
-        if self.timer.stopped:
-            self._sm.outdate(self.rect, (self,))
             self.kill()
-            return
-        self.timer.update()
+        self.move()
 
     def get_harmed(self, *others):
         for e in others:
@@ -156,10 +153,11 @@ class Projectile(Sprite, Movable):
 
     collide = get_harmed
 
-    def explode(self):
+    def kill(self):
+        self.health = 0
         self._sm.outdate(self.rect, (self,))
         self._sm.create_explosion(self, self.rect.center, self.damage, 12)
-        self.kill()
+        super().kill()
 
 
 class Explosion(Sprite):
@@ -200,31 +198,36 @@ class Explosion(Sprite):
         if self.timer.stopped:
             self.kill()
             return
-        for e, times in self._sm.count_rect_content(self.rect).items():
-            if (not hasattr(e, 'team') or e.team != self.team) and e is not Wall:
+        for e, times in self._sm.count_rect_content(self.rect, lambda x: x not in (None, Wall)).items():
+            if (not hasattr(e, 'team') or e.team != self.team):
                 e.get_harmed(*(self for _ in range(times)))
         self.timer.update()
 
 
 class Tile(Sprite):
-    def __init__(self, health, group, session_manager):
+    def __init__(self, health, group, session_manager, team=None):
         super().__init__(group)
         self.image = bricks_img
         self.rect = self.image.get_rect()
         self.rect.center = (500, 300)
         self.health = health
+        self.team = team
         self._sm = session_manager
         if len(self._sm.place(self)) > 0:
             pass
 
     def update(self):
         if self.health < 0:
-            self._sm.outdate(self.rect, (self,))
             self.kill()
 
     def get_harmed(self, *others):
         for e in others:
             self.health -= e.damage
+
+    def kill(self):
+        self.health = 0
+        self._sm.outdate(self.rect, (self,))
+        super().kill()
 
 
 def issolid(obj: Sprite):

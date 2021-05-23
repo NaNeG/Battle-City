@@ -27,7 +27,7 @@ class Map:
         cells = self.get_rect_cells(rect)
 
         if len(to_be_replaced) > 0:
-            extra = self.get_content(cells, to_be_replaced)
+            extra = self.get_content(cells, lambda x: x not in to_be_replaced)
             if len(extra) > 0:
                 return extra
 
@@ -49,17 +49,17 @@ class Map:
 
         return MoveResult(obj, extra_while_outdating, bumped_while_placing)
 
-    def get_content(self, cells, excluding=(None,)):
-        return {self.get_cell(x,y) for x, y in cells if self.get_cell(x,y) not in excluding}
+    def get_content(self, cells, filter=lambda x: x is not None):
+        return {self.get_cell(x,y) for x, y in cells if filter(self.get_cell(x,y))}
 
-    def count_content(self, cells, excluding=(None,)):
-        return Counter(self.get_cell(x,y) for x, y in cells if self.get_cell(x,y) not in excluding)
+    def count_content(self, cells, filter=lambda x: x is not None):
+        return Counter(self.get_cell(x,y) for x, y in cells if filter(self.get_cell(x,y)))
 
-    def get_rect_content(self, rect: Rect, excluding=(None,)):
-        return self.get_content(self.get_rect_cells(rect), excluding)
+    def get_rect_content(self, rect: Rect, filter=lambda x: x is not None):
+        return self.get_content(self.get_rect_cells(rect), filter)
 
-    def count_rect_content(self, rect: Rect, excluding=(None,)):
-        return self.count_content(self.get_rect_cells(rect), excluding)
+    def count_rect_content(self, rect: Rect, filter=lambda x: x is not None):
+        return self.count_content(self.get_rect_cells(rect), filter)
 
     def get_rect_cells(self, rect: Rect):
         'Построчно возвращает клетки, соответствующие прямоугольнику'
