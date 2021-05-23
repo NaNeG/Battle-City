@@ -61,7 +61,7 @@ class Tank(Sprite, Movable):
 
         self.direction = direction
         self.rect = self.image.get_rect()
-        self.rect.center = point
+        self.rect.topleft = point
         self.speed = speed
         self.health = health
         self.team = team
@@ -205,11 +205,11 @@ class Explosion(Sprite):
 
 
 class Tile(Sprite):
-    def __init__(self, health, group, session_manager, team=None):
+    def __init__(self, point, health, group, session_manager, team=None):
         super().__init__(group)
         self.image = bricks_img
         self.rect = self.image.get_rect()
-        self.rect.center = (500, 300)
+        self.rect.topleft = point
         self.health = health
         self.team = team
         self._sm = session_manager

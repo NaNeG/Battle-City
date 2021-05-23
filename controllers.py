@@ -20,7 +20,7 @@ class AI:
         self._dir_weights = [AI._max_weight // 11] * 5
         self.tank.controls[FIRE] = True
 
-    def update(self):
+    def update(self, controls=None):
         if self.dir_timer.stopped:
             direction, = choices((UP, RIGHT, DOWN, LEFT, None), self._dir_weights)
             self.tank.controls[:4] = (False,) * 4
@@ -37,7 +37,7 @@ class PatrolAI:
         self.dir_timer = TactsCounter(count=6, cycled=False)
         self.tank.controls[FIRE] = True
 
-    def update(self):
+    def update(self, controls=None):
         if self.dir_timer.stopped:
             direction = choice((UP, RIGHT, DOWN, LEFT, None))
             self.tank.controls[:4] = (False,) * 4

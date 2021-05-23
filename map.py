@@ -2,7 +2,7 @@ from objects import Wall
 from typing import Counter, Union
 from pygame import Rect
 from pygame.sprite import Sprite
-from constants import scale, screen_size
+from constants import RIGHT, UP, scale, screen_size
 
 
 class Map:
@@ -13,6 +13,9 @@ class Map:
         self.size = (round(screen_size[0] // cell_size + 1),
                      round(screen_size[1] // cell_size + 1))
 
+        self.clear_cells()
+
+    def clear_cells(self):
         self.cells = [[None]*(self.size[1]) for _ in range(self.size[0])]
 
     def place(self, obj: Sprite, rect: Rect=None, onempty=True):
@@ -64,19 +67,20 @@ class Map:
     def get_rect_cells(self, rect: Rect):
         'Построчно возвращает клетки, соответствующие прямоугольнику'
         t, l, b, r = (round(e / self.cell_size) for e in (rect.top, rect.left, rect.bottom, rect.right))
-        return [(x, y) for y in range(t, b+1) for x in range(l, r+1)]
+        return [(x, y) for y in range(t, b) for x in range(l, r)]
 
     def get_cell(self, x, y):
         return self.cells[x][y] if 0 <= x < self.size[0] and 0 <= y < self.size[1] else Wall
 
-    def __repr__(self):
-        def r(obj):
-            if obj is None:
-                return ' '
-            if hasattr(obj, 'speed'):
-                return 'P'
-            return 'T'
-        return '\n'.join(''.join(r(self.cells[x][y]) for y in range(self.size[1])) for x in range(self.size[0]))
+
+    # def __repr__(self):
+    #     def r(obj):
+    #         if obj is None:
+    #             return ' '
+    #         if hasattr(obj, 'speed'):
+    #             return 'P'
+    #         return 'T'
+    #     return '\n'.join(''.join(r(self.cells[x][y]) for y in range(self.size[1])) for x in range(self.size[0]))
 
 
 class MoveResult:

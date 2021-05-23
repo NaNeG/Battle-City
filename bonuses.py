@@ -9,7 +9,7 @@ class BonusObj(Sprite):
         super().__init__(group)
         self.images = [star_bonus_img, dark_bonus_img]
         self.rect = self.images[0].get_rect()
-        self.rect.center = point
+        self.rect.topleft = point
         self.anim_tacts_counter = TactsCounter(count=2, tact_length=5)
         self.timer = TactsCounter(count=200, cycled=False)
         self.type = type
