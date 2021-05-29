@@ -96,11 +96,15 @@ class Tank(Sprite, Movable):
 
     def move(self):
         super().move()
+        if self.team == self._sm.players and not pg.mixer.Channel(2).get_busy():
+            self._sm.play_sound("bg")
         self.anim_tacts_counter.update()
     
     def fire(self):
         if self.shooting_delayer.stopped:
             self._sm.shoot(self)
+            if self.team == self._sm.players:
+                self._sm.play_sound("fire")
             self.shooting_delayer.reset()
 
     def collide(self, *others):
@@ -108,6 +112,8 @@ class Tank(Sprite, Movable):
 
     def get_harmed(self, *others):
         for e in others:
+            if not pg.mixer.Channel(4).get_busy():
+                self._sm.play_sound("explosion")
             self.health -= e.damage
 
     def kill(self):
@@ -115,6 +121,7 @@ class Tank(Sprite, Movable):
         super().kill()
         self._sm.outdate(self.rect, (self,))
         self._sm.create_explosion(None, self.rect.center, 0, 6)
+
 
 
 class Projectile(Sprite, Movable):

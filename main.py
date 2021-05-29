@@ -12,6 +12,8 @@ from map import Map
 clock = pg.time.Clock()
 map = Map()
 
+pg.mixer.init(44100, -16, 1, 512)
+
 sm = SessionManager(map)
 
 with open('map.txt', 'r') as f:
@@ -19,6 +21,26 @@ with open('map.txt', 'r') as f:
 b = sm.create_bonus((560, 200), SHIELD)
 
 game_iteration = 0
+
+def pause():
+    paused = True
+    while paused:
+        clock.tick(fps)
+        keystate = pg.key.get_pressed()
+
+        events = pg.event.get()
+        for event in events:
+            if event.type == pg.QUIT:
+                quit()
+
+        if keystate[pg.K_RETURN]:
+            paused = False
+
+        font = pg.font.SysFont("verdana", 24)
+        text = font.render("Нажмите ENTER чтобы продолжить", 1, WHITE)
+        screen.blit(text, (5, 5))
+        pg.display.flip()
+
 while True:
     clock.tick(fps)
     keystate = pg.key.get_pressed()
@@ -27,6 +49,9 @@ while True:
     if any(event.type == pg.QUIT for event in events) or not sm.enemies.alive or not sm.players.alive:
         break
 
+    if keystate[pg.K_ESCAPE]:
+        pause()
+
     sm.update(keystate)
     screen.fill(BLACK)
     sm.draw(screen)
@@ -34,5 +59,7 @@ while True:
     pg.display.flip()
 
     game_iteration += 1
+
+
 
 pg.quit()

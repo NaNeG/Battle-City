@@ -19,6 +19,8 @@ class SessionManager:
 
         self.players = Team()
         self.enemies = Team()
+        self.sounds = self.load_sounds()
+        self.play_sound("start")
 
         self._map = map
 
@@ -122,6 +124,31 @@ class SessionManager:
             return [self.create_base(point, 100) for point in (a,b,c,d)]
         if s == 'G':
             return [self.create_effect(point, green_img) for point in (a,b,c,d)]
+
+    def load_sounds(self):
+        sounds = {}
+        sounds["start"] = pg.mixer.Sound("sounds/sounds_gamestart.ogg")
+        sounds["end"] = pg.mixer.Sound("sounds/sounds_gameover.ogg")
+        sounds["score"] = pg.mixer.Sound("sounds/sounds_score.ogg")
+        sounds["bg"] = pg.mixer.Sound("sounds/sounds_background.ogg")
+        sounds["fire"] = pg.mixer.Sound("sounds/sounds_fire.ogg")
+        sounds["bonus"] = pg.mixer.Sound("sounds/sounds_bonus.ogg")
+        sounds["explosion"] = pg.mixer.Sound("sounds/sounds_explosion.ogg")
+        sounds["brick"] = pg.mixer.Sound("sounds/sounds_brick.ogg")
+        sounds["steel"] = pg.mixer.Sound("sounds/sounds_steel.ogg")
+        return sounds
+
+    def play_sound(self, sound):
+        s = self.sounds[sound]
+        channel = pg.mixer.Channel(1)
+        if sound == "bg":
+            channel = pg.mixer.Channel(2)
+        if sound == "start":
+            channel = pg.mixer.Channel(3)
+        if sound == "explosion":
+            channel = pg.mixer.Channel(4)
+        if not pg.mixer.Channel(3).get_busy():
+            channel.play(s)
 
     def update(self, keystate):
         for t in self.players, self.enemies:
