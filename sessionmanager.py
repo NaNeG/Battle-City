@@ -7,7 +7,7 @@ from objects import Destructable, Tank, Projectile, Tile, Explosion, jump
 from images import green_img, concrete_img, tank_ylw_img, tank_grn_img, bricks_img, base_img, water_img
 from bonuses import BonusObj
 from constants import DESTROY_ENEMIES, HEALING, POWER_UP, REPAIR_FORTRESS, SHIELD, UP, scale
-from controllers import AI, Player
+from controllers import AI, DrPlayer, Player
 from teams import Team
 
 
@@ -85,6 +85,9 @@ class SessionManager:
 
     def create_water(self, point):
         return Tile(water_img, point, self.environment, self, False, True)
+
+    def create_ice(self, point):
+        return Tile(water_img, point, self.environment, self, True, True, 40)
 
     def create_bonus(self, point, type):
         return BonusObj(point, type, self.effects, self)

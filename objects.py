@@ -1,3 +1,4 @@
+from collections import deque
 from images import *
 from typing import Callable, List, Set, Tuple, Type
 from pygame import Rect
@@ -74,12 +75,25 @@ class Tank(Sprite, Movable):
         self.controls = [False] * 5
         self._sm.place(self)
 
+        self._planned_moving = deque()
+        self._sliding = 0
+
     def can_walk_on(self, x):
         return isinstance(x, Tile) and x.is_walkable
 
     @property
     def image(self):
         return self.images[self.anim_tacts_counter.tact][self.direction]
+
+    @property
+    def sliding(self):
+        return self._sliding
+
+    @sliding.setter
+    def sliding(self, val):
+        self._sliding = val
+        for _ in range(len(self._planned_moving) - val - 1):
+            self._planned_moving.popleft()
 
     def update(self):
         super().update()
@@ -92,18 +106,26 @@ class Tank(Sprite, Movable):
         for dir in UP, RIGHT, DOWN, LEFT:
             if self.controls[dir]:
                 self.direction = dir
+                self._planned_moving.append(dir)
                 self.move()
                 break
+        else:
+            self._planned_moving.append(None)
+
+        if len(self._planned_moving) > self.sliding // 2:
+            movement = self._planned_moving.popleft()
+            if movement is not None:
+                super().move(direction=movement)
 
         if self.controls[FIRE]:
             self.fire()
 
     def move(self):
-        super().move()
-        if self.team == self._sm.players and not pg.mixer.Channel(2).get_busy():
+        if not pg.mixer.Channel(2).get_busy():
+            pass
             self._sm.play_sound("bg")
         self.anim_tacts_counter.update()
-    
+
     def fire(self):
         if self.shooting_delayer.stopped:
             self._sm.shoot(self)
@@ -112,7 +134,13 @@ class Tank(Sprite, Movable):
             self.shooting_delayer.reset()
 
     def collide(self, *others):
-        pass
+        self.sliding = max([0, *(e.slipperiness for e in others if isinstance(e, Tile))])
+        # for e in others:
+        #     if isinstance(e, Tile) and e.is_slippy:
+        #         self.sliding = 12
+        #         break
+        # else:
+        #     self.sliding = 0
 
     def get_harmed(self, *others):
         for e in others:
@@ -125,7 +153,6 @@ class Tank(Sprite, Movable):
         super().kill()
         self._sm.outdate(self)
         self._sm.create_explosion(None, self.rect.center, 0, 6)
-
 
 
 class Projectile(Sprite, Movable):
@@ -218,7 +245,7 @@ class Explosion(Sprite):
 
 
 class Tile(Sprite):
-    def __init__(self, image, point, group, session_manager, is_walkable=False, is_flyable=False):
+    def __init__(self, image, point, group, session_manager, is_walkable=False, is_flyable=False, slipperiness=0):
         super().__init__(group)
         self.image = image
         self.rect = self.image.get_rect()
@@ -227,6 +254,7 @@ class Tile(Sprite):
         self._sm.place(self)
         self.is_walkable = is_walkable
         self.is_flyable = is_flyable
+        self.slipperiness = slipperiness
 
     def kill(self):
         self._sm.outdate(self)

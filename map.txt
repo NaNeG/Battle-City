@@ -1,7 +1,7 @@
 BBBBBBBBBBBBBBBBBBBB
-B   E    BBBB  GEBBB
+B        BBBB  GPBBB
 BBBBB      BBBBBBBBB
 BB              BBBB
 BB             WBBBB
 BBBB    BBB     BBBB
-BBB  G EBFBG  P    B
+BBB  G  BFBG       B
