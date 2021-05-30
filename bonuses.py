@@ -28,6 +28,7 @@ class BonusObj(Sprite):
         if len(best_pretendent) > 0:
             (best_pretendent, _), = best_pretendent
             self.kill()
+            self._sm.play_sound("bonus")
             self._sm.set_bonus(best_pretendent, self.type)
         self.anim_tacts_counter.update()
         self.timer.update()
