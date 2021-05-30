@@ -1,13 +1,14 @@
 from objects import Tank, Wall
 from pygame.sprite import Sprite
-from images import star_bonus_img, dark_bonus_img
+from images import star_bonus_img, darken
 from tactscounter import TactsCounter
 
 
 class BonusObj(Sprite):
     def __init__(self, point, type, group, session_manager):
         super().__init__(group)
-        self.images = [star_bonus_img, dark_bonus_img]
+        bonus_img = star_bonus_img
+        self.images = [bonus_img, darken(bonus_img, 60)]
         self.rect = self.images[0].get_rect()
         self.rect.topleft = point
         self.anim_tacts_counter = TactsCounter(count=2, tact_length=5)

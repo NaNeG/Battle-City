@@ -30,6 +30,9 @@ bricks_img = get_img(48,64,8,8, scale)
 red_bricks_img = get_img(56,64,8,8, scale)
 concrete_img = get_img(48,72,8,8, scale)
 green_img = get_img(56,72,8,8, scale)
+water_img = get_img(64,64,8,8, scale)
+
+base_img = get_img(0,16,16,14, scale)
 
 exp1_img = get_img(10,92,11,10, scale)
 exp2_img = get_img(40,91,15,13, scale)
@@ -41,7 +44,9 @@ shovel_bonus_img = get_img(32,32,16,15, scale)
 star_bonus_img = get_img(48,32,16,15, scale)
 tank_bonus_img = get_img(64,32,16,15, scale)
 timer_bonus_img = get_img(80,32,16,15, scale)
-dark_bonus_img = colorize(grenade_bonus_img, BLACK)
+dark_bonus_img = colorize(grenade_bonus_img, (255,255,255,120))
+
+base_bonus = get_img(0,16,16,14, scale)
 
 
 def img_rotations(img):
@@ -49,3 +54,6 @@ def img_rotations(img):
             rotate(img, 270),
             flip(rotate(img, 180), True, False),
             flip(rotate(img, 90), False, True))
+
+def darken(img, deg=120):
+    return colorize(img, (255,255,255,deg))

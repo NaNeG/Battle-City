@@ -24,7 +24,7 @@ while True:
     keystate = pg.key.get_pressed()
 
     events = pg.event.get()
-    if any(event.type == pg.QUIT for event in events) or not sm.enemies.alive or not sm.players.alive:
+    if any(event.type == pg.QUIT for event in events):# or not sm.enemies.alive or not sm.players.alive:
         break
 
     sm.update(keystate)

@@ -1,5 +1,5 @@
 from images import *
-from typing import List, Tuple
+from typing import Callable, List, Set, Tuple, Type
 from pygame import Rect
 from pygame.sprite import LayeredUpdates, Sprite
 from tactscounter import TactsCounter
@@ -16,27 +16,32 @@ class Movable:
     speed: float
     direction: int
     rect: Rect
-    blocked: List[bool]
-    collide: callable
+    collide: Callable
+    can_walk_on: Callable
     _sm: 'SessionManager'
 
-    def move(self, speed=None, direction=None):
+    def move(self, speed=None, direction=None, can_walk_on=None):
         if speed is None:
             speed = self.speed
 
         if direction is None:
             direction = self.direction
 
+        if can_walk_on is None:
+            can_walk_on = self.can_walk_on
+
         step = jump((0,0), 1, direction)
 
         for _ in range(speed):
             new_rect = self.rect.move(step)
-            move_res = self._sm.jump(self, new_rect)
-            if move_res.ok:
+            success, found_objects = self._sm.move(self, new_rect, self.rect, can_walk_on)
+            for e in found_objects:
+                if hasattr(e, 'collide'):
+                    e.collide(self)
+            self.collide(*found_objects)
+            if success:
                 self.rect = new_rect
             else:
-                self.collide(*move_res.found_extra)
-                self.collide(*move_res.bumped)
                 break
 
     def jump(self, dist=None, direction=None):
@@ -51,12 +56,9 @@ class Movable:
 
 
 class Tank(Sprite, Movable):
-    def __init__(self, team, point, speed, delay, health, direction, damage, group, session_manager):
+    def __init__(self, images, team, point, speed, delay, health, direction, damage, group, session_manager):
         super().__init__(group)
-        self.images = [
-            img_rotations(tank_ylw_img),
-            img_rotations(tank_grn_img)
-        ]
+        self.images = [img_rotations(img) for img in images]
         self.anim_tacts_counter = TactsCounter(count=len(self.images), tact_length=5)
 
         self.direction = direction
@@ -70,8 +72,10 @@ class Tank(Sprite, Movable):
 
         self.shooting_delayer = TactsCounter(count=delay, cycled=False)
         self.controls = [False] * 5
-        if len(self._sm.place(self)) > 0:
-            self.kill()
+        self._sm.place(self)
+
+    def can_walk_on(self, x):
+        return isinstance(x, Tile) and x.is_walkable
 
     @property
     def image(self):
@@ -113,7 +117,7 @@ class Tank(Sprite, Movable):
     def kill(self):
         self.health = 0
         super().kill()
-        self._sm.outdate(self.rect, (self,))
+        self._sm.outdate(self)
         self._sm.create_explosion(None, self.rect.center, 0, 6)
 
 
@@ -133,13 +137,15 @@ class Projectile(Sprite, Movable):
         self.health = 15
         self._sm = session_manager
 
-        extra = session_manager.place(self)
-        if len(extra) > 0:
-            self.collide(*extra)
+        session_manager.place(self)
+
+    def can_walk_on(self, x):
+        return isinstance(x, Tile) and x.is_flyable
 
     def update(self):
         if self.health <= 0:
             self.kill()
+            return
         self.move()
 
     def get_harmed(self, *others):
@@ -148,14 +154,14 @@ class Projectile(Sprite, Movable):
                 break
             if issolid(e):
                 self.health = 0
-            else:
+            elif not self.can_walk_on(e):
                 self.health -= e.damage
 
     collide = get_harmed
 
     def kill(self):
         self.health = 0
-        self._sm.outdate(self.rect, (self,))
+        self._sm.outdate(self)
         self._sm.create_explosion(self, self.rect.center, self.damage, 12)
         super().kill()
 
@@ -199,25 +205,38 @@ class Explosion(Sprite):
             self.kill()
             return
         for e, times in self._sm.count_rect_content(self.rect, lambda x: x not in (None, Wall)).items():
-            if (not hasattr(e, 'team') or e.team != self.team):
+            if hasattr(e, 'get_harmed') and (not hasattr(e, 'team') or e.team != self.team):
                 e.get_harmed(*(self for _ in range(times)))
         self.timer.update()
 
 
 class Tile(Sprite):
-    def __init__(self, point, health, group, session_manager, team=None):
+    def __init__(self, image, point, group, session_manager, is_walkable=False, is_flyable=False):
         super().__init__(group)
-        self.image = bricks_img
+        self.image = image
         self.rect = self.image.get_rect()
         self.rect.topleft = point
+        self._sm = session_manager
+        self._sm.place(self)
+        self.is_walkable = is_walkable
+        self.is_flyable = is_flyable
+
+    def kill(self):
+        self._sm.outdate(self)
+        super().kill()
+
+    def collide(self, *others):
+        pass
+
+
+class Destructable(Tile):
+    def __init__(self, image, point, health, group, session_manager, is_walkable=False, is_flyable=False, team=None):
+        super().__init__(image, point, group, session_manager, is_walkable, is_flyable)
         self.health = health
         self.team = team
-        self._sm = session_manager
-        if len(self._sm.place(self)) > 0:
-            pass
 
     def update(self):
-        if self.health < 0:
+        if self.health <= 0:
             self.kill()
 
     def get_harmed(self, *others):
@@ -225,13 +244,12 @@ class Tile(Sprite):
             self.health -= e.damage
 
     def kill(self):
-        self.health = 0
-        self._sm.outdate(self.rect, (self,))
         super().kill()
+        self.health = 0
 
 
 def issolid(obj: Sprite):
-    return isinstance(obj, (Tank, Projectile, Tile)) or obj is Wall
+    return isinstance(obj, (Tank, Projectile, Destructable)) or obj is Wall
 
 
 def jump(coords: Tuple[int, int], dist, direction):

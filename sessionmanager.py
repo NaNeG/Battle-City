@@ -3,10 +3,10 @@ from pygame import Rect
 import pygame as pg
 from pygame.sprite import Sprite, Group, LayeredUpdates
 from map import Map
-from objects import Tank, Projectile, Tile, Explosion, jump
-from images import green_img, concrete_img
+from objects import Destructable, Tank, Projectile, Tile, Explosion, jump
+from images import green_img, concrete_img, tank_ylw_img, tank_grn_img, bricks_img, base_img, water_img
 from bonuses import BonusObj
-from constants import DESTROY_ENEMIES, HEALING, POWER_UP, REPAIR_FORTRESS, RIGHT, SHIELD, UP, scale
+from constants import DESTROY_ENEMIES, HEALING, POWER_UP, REPAIR_FORTRESS, SHIELD, UP, scale
 from controllers import AI, Player
 from teams import Team
 
@@ -22,17 +22,27 @@ class SessionManager:
 
         self._map = map
 
-    def jump(self, obj: Sprite, newrect: Rect, oldrect: Rect=None):
-        return self._map.jump(obj, newrect, oldrect)
+    # def jump(self, obj: Sprite, newrect: Rect, oldrect: Rect=None):
+    #     return self._map.jump(obj, newrect, oldrect)
 
-    def place(self, obj: Sprite, rect: Rect=None, onempty=True):
-        return self._map.place(obj, rect, onempty)
+    def move(self, obj: Sprite, newrect: Rect, oldrect: Rect=None, validator=lambda obj: False):
+        if oldrect is None:
+            oldrect = obj.rect
+        found_objects = (self._map.get_rect_content(oldrect, lambda x: x is not obj) |
+                         self._map.get_rect_content(newrect, lambda x: x is not obj))
+        success = all(validator(obj) for obj in found_objects)
+        if success:
+            self._map.jump(obj, newrect, oldrect)
+        return success, found_objects
 
-    def outdate(self, rect: Rect, expected=()):
-        return self._map.outdate(rect, expected)
+    def place(self, obj: Sprite, rect: Rect=None):
+        return self._map.place(obj, rect)
 
-    def count_rect_content(self, rect, filter=lambda x: x is not None):
-        return self._map.count_rect_content(rect, filter)
+    def outdate(self, obj: Sprite, rect: Rect=None):
+        return self._map.outdate(obj, rect)
+
+    def count_rect_content(self, rect, selector=lambda obj: True):
+        return self._map.count_rect_content(rect, selector)
 
     def create_explosion(self, obj, point, total_damage, duration):
         return Explosion(obj.team if hasattr(obj, 'team') else None, point, total_damage, duration, self.effects, self)
@@ -41,7 +51,8 @@ class SessionManager:
         return Projectile(tank.team, jump(tank.rect.center, 10*scale, tank.direction), 5, tank.direction, tank.damage, self.active, self)
 
     def create_tank(self, team, point, speed, delay, health, direction, damage):
-        tank = Tank(team, point, speed, delay, health, direction, damage, self.active, self)
+        images = tank_ylw_img, tank_grn_img
+        tank = Tank(images, team, point, speed, delay, health, direction, damage, self.active, self)
         team.teammates.add(tank)
         return tank
 
@@ -60,20 +71,18 @@ class SessionManager:
         team.controllers.add(ai)
         return ai
 
-    def create_tile(self, point, health, team=None):
-        return Tile(point, health, self.environment, self, team)
+    def create_destructable(self, image, point, health, team=None):
+        return Destructable(image, point, health, self.environment, self, False, False, team)
 
     def create_base(self, point, health):
-        self.players.base = self.create_tile(point, health, self.players)
-        self.players.base.image = concrete_img
+        self.players.base = self.create_destructable(base_img, point, health, self.players)
         return self.players.base
 
-    def create_effect(self, point, img):
-        s = Sprite(self.effects)
-        s.image = img
-        s.rect = img.get_rect()
-        s.rect.topleft = point
-        return s
+    def create_green(self, point):
+        return Tile(green_img, point, self.effects, self, True, True)
+
+    def create_water(self, point):
+        return Tile(water_img, point, self.environment, self, False, True)
 
     def create_bonus(self, point, type):
         return BonusObj(point, type, self.effects, self)
@@ -112,16 +121,18 @@ class SessionManager:
             return self.create_player_tank(point, speed=2, delay=20, health=100, direction=UP, damage=400)
         if s == 'E':
             return self.create_ai_tank(self.enemies, point, speed=2, delay=20, health=100, direction=UP, damage=400)
+        if s == 'F':
+            return self.create_base(point, 100)
 
         a,b,c,d = ((point[0] + s1 * square_size//2,
                     point[1] + s2 * square_size//2)
                     for s1 in (0,1) for s2 in (0,1))
         if s == 'B':
-            return [self.create_tile(point, 100) for point in (a,b,c,d)]
-        if s == 'F':
-            return [self.create_base(point, 100) for point in (a,b,c,d)]
+            return [self.create_destructable(bricks_img, point, 100) for point in (a,b,c,d)]
         if s == 'G':
-            return [self.create_effect(point, green_img) for point in (a,b,c,d)]
+            return [self.create_green(point) for point in (a,b,c,d)]
+        if s == 'W':
+            return [self.create_water(point) for point in (a,b,c,d)]
 
     def update(self, keystate):
         for t in self.players, self.enemies:
@@ -133,3 +144,22 @@ class SessionManager:
         for g in self.environment, self.active, self.effects:
             g.draw(surface)
 
+
+# class MoveResult:
+#     def __init__(self, obj, found_invalid_objects=set(), found_valid_objects=set()):
+#         self.obj = obj
+#         self.ok = len(found_invalid_objects) == 0
+#         self.invalid_objects = found_invalid_objects
+#         self.valid_objects = found_valid_objects
+
+#     @classmethod
+#     def demarcate(cls, obj, found_objects, validator):
+#         return cls(obj, {e for e in found_objects if not validator(e)}, {e for e in found_objects if validator(e)})
+
+    # def __ior__(self, other):
+    #     if self.obj != other.obj:
+    #         raise ValueError
+    #     self.invalid_objects |= other.invalid_objects
+    #     self.valid_objects |= other.valid_objects
+    #     self.ok |= other.ok
+    #     return self
