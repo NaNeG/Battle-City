@@ -25,7 +25,7 @@ class SessionManager:
 
         self.keystate = []
         self.cheat_tacts_counter = TactsCounter(count=0, tact_length=1, cycled=False)
-        self.required_keys = [False, False, True, True, True]
+        self.required_keys = [False] * 5
         self._map = map
 
     # def jump(self, obj: Sprite, newrect: Rect, oldrect: Rect=None):
@@ -186,11 +186,11 @@ class SessionManager:
             self.required_keys[4] = True
             self.cheat_tacts_counter = TactsCounter(count=45, tact_length=1, cycled=False)
         elif self.cheat_tacts_counter.tact >= 44:
-            self.required_keys = [False, False, False, False, False]
+            self.required_keys = [False] * 5
             self.cheat_tacts_counter = TactsCounter(count=0, tact_length=1, cycled=False)
 
-        # print(self.cheat_tacts_counter.tact)
-        # print(self.required_keys)
+        print(self.cheat_tacts_counter.tact)
+        print(self.required_keys)
 
         if self.required_keys[0] and self.required_keys[1] and self.required_keys[2] and self.required_keys[3] and self.required_keys[4]:
             self.enemies.kill()
