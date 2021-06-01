@@ -6,6 +6,7 @@ from map import Map
 from objects import Destructable, Tank, Projectile, Tile, Explosion, jump
 from images import green_img, concrete_img, tank_ylw_img, tank_grn_img, bricks_img, base_img, water_img
 from bonuses import BonusObj
+from tactscounter import TactsCounter
 from constants import DESTROY_ENEMIES, HEALING, POWER_UP, REPAIR_FORTRESS, SHIELD, UP, scale
 from controllers import AI, DrPlayer, Player
 from teams import Team
@@ -22,6 +23,9 @@ class SessionManager:
         self.sounds = self.load_sounds()
         self.play_sound("start")
 
+        self.keystate = []
+        self.cheat_tacts_counter = TactsCounter(count=0, tact_length=1, cycled=False)
+        self.required_keys = [False, False, True, True, True]
         self._map = map
 
     # def jump(self, obj: Sprite, newrect: Rect, oldrect: Rect=None):
@@ -164,7 +168,37 @@ class SessionManager:
         if not pg.mixer.Channel(3).get_busy():
             channel.play(s)
 
+    def cheat_code(self):
+        self.cheat_tacts_counter.update()
+        if self.keystate[pg.K_c] and not self.required_keys[0]:
+            self.required_keys[0] = True
+            self.cheat_tacts_counter = TactsCounter(count=45, tact_length=1, cycled=False)
+        if self.keystate[pg.K_h] and self.required_keys[0] and not self.required_keys[1]:
+            self.required_keys[1] = True
+            self.cheat_tacts_counter = TactsCounter(count=45, tact_length=1, cycled=False)
+        if self.keystate[pg.K_e] and self.required_keys[1] and not self.required_keys[2]:
+            self.required_keys[2] = True
+            self.cheat_tacts_counter = TactsCounter(count=45, tact_length=1, cycled=False)
+        if self.keystate[pg.K_a] and self.required_keys[2] and not self.required_keys[3]:
+            self.required_keys[3] = True
+            self.cheat_tacts_counter = TactsCounter(count=45, tact_length=1, cycled=False)
+        if self.keystate[pg.K_t] and self.required_keys[3] and not self.required_keys[4]:
+            self.required_keys[4] = True
+            self.cheat_tacts_counter = TactsCounter(count=45, tact_length=1, cycled=False)
+        elif self.cheat_tacts_counter.tact >= 44:
+            self.required_keys = [False, False, False, False, False]
+            self.cheat_tacts_counter = TactsCounter(count=0, tact_length=1, cycled=False)
+
+        # print(self.cheat_tacts_counter.tact)
+        # print(self.required_keys)
+
+        if self.required_keys[0] and self.required_keys[1] and self.required_keys[2] and self.required_keys[3] and self.required_keys[4]:
+            self.enemies.kill()
+
+
     def update(self, keystate):
+        self.keystate = keystate
+        self.cheat_code()
         for t in self.players, self.enemies:
             t.update(keystate)
         for g in self.environment, self.active, self.effects:
