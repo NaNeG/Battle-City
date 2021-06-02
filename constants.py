@@ -3,7 +3,7 @@ import os as _os
 
 # settings
 scale = 2.5
-screen_size = (round(320*scale), round(112*scale))
+screen_size = (round(320*scale), round(112*5/4*scale))
 fps = 30
 
 

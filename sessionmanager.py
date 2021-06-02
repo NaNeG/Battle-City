@@ -1,5 +1,5 @@
 from typing import Union
-from pygame import Rect
+from pygame import Rect, Surface
 import pygame as pg
 from pygame.sprite import Sprite, Group, LayeredUpdates
 from map import Map
@@ -8,25 +8,32 @@ from images import tank_ylw_img, tank_grn_img, tank_ylw2_img, tank_grn2_img, tan
 from images import green_img, water_img, ice_img, bricks_img, concrete_img, base_img
 from bonuses import BonusObj
 from tactscounter import TactsCounter
-from constants import DESTROY_ENEMIES, DOWN, HEALING, POWER_UP, REPAIR_FORTRESS, SHIELD, UP, scale
+from constants import BLACK, DESTROY_ENEMIES, DOWN, HEALING, POWER_UP, REPAIR_FORTRESS, SHIELD, UP, scale, screen_size
 from controllers import AI, Player
 from teams import Team
 
 
 class SessionManager:
-    def __init__(self, map: Map):
+    def __init__(self, txt_map, gamemanager):
+        self._gm = gamemanager
         self.active = Group()
         self.environment = Group()
         self.effects = LayeredUpdates()
 
         self.players = Team()
         self.enemies = Team()
-        self.sounds = self.load_sounds()
-        self.play_sound("start")
 
         self.cheat_tacts_counter = TactsCounter(count=45, tact_length=1, cycled=False)
         self.required_keys = [False] * 5
-        self._map = map
+
+        self.screen = Surface((screen_size[0], 0.8 * screen_size[1]))
+
+        self._map = Map(screen_size=(screen_size[0], 0.8 * screen_size[1]))
+        self.parse_map(txt_map)
+
+        self.sounds = self.load_sounds()
+        self.play_sound("start")
+        self._gm.in_game = True
 
     # def jump(self, obj: Sprite, newrect: Rect, oldrect: Rect=None):
     #     return self._map.jump(obj, newrect, oldrect)
@@ -186,17 +193,17 @@ class SessionManager:
             return [self.create_ice(point) for point in (a,b,c,d)]
 
     def load_sounds(self):
-        sounds = {}
-        sounds["start"] = pg.mixer.Sound("sounds/sounds_gamestart.ogg")
-        sounds["end"] = pg.mixer.Sound("sounds/sounds_gameover.ogg")
-        sounds["score"] = pg.mixer.Sound("sounds/sounds_score.ogg")
-        sounds["bg"] = pg.mixer.Sound("sounds/sounds_background.ogg")
-        sounds["fire"] = pg.mixer.Sound("sounds/sounds_fire.ogg")
-        sounds["bonus"] = pg.mixer.Sound("sounds/sounds_bonus.ogg")
-        sounds["explosion"] = pg.mixer.Sound("sounds/sounds_explosion.ogg")
-        sounds["brick"] = pg.mixer.Sound("sounds/sounds_brick.ogg")
-        sounds["steel"] = pg.mixer.Sound("sounds/sounds_steel.ogg")
-        return sounds
+        return {
+            "start": pg.mixer.Sound("sounds/sounds_gamestart.ogg"),
+            "end": pg.mixer.Sound("sounds/sounds_gameover.ogg"),
+            "score": pg.mixer.Sound("sounds/sounds_score.ogg"),
+            "bg": pg.mixer.Sound("sounds/sounds_background.ogg"),
+            "fire": pg.mixer.Sound("sounds/sounds_fire.ogg"),
+            "bonus": pg.mixer.Sound("sounds/sounds_bonus.ogg"),
+            "explosion": pg.mixer.Sound("sounds/sounds_explosion.ogg"),
+            "brick": pg.mixer.Sound("sounds/sounds_brick.ogg"),
+            "steel": pg.mixer.Sound("sounds/sounds_steel.ogg")
+        }
 
     def play_sound(self, sound):
         s = self.sounds[sound]
@@ -226,32 +233,22 @@ class SessionManager:
 
 
     def update(self, keystate):
+        if keystate[pg.K_ESCAPE]:
+            self._gm.in_game = False
+            return
+        if not self._gm.in_game:
+            Exception()
+
         self.update_cheat_code(keystate)
+
         for t in self.players, self.enemies:
             t.update(keystate)
         for g in self.environment, self.active, self.effects:
             g.update()
 
-    def draw(self, surface):
+        self.screen.fill(BLACK)
+        self.draw()
+
+    def draw(self):
         for g in self.environment, self.active, self.effects:
-            g.draw(surface)
-
-
-# class MoveResult:
-#     def __init__(self, obj, found_invalid_objects=set(), found_valid_objects=set()):
-#         self.obj = obj
-#         self.ok = len(found_invalid_objects) == 0
-#         self.invalid_objects = found_invalid_objects
-#         self.valid_objects = found_valid_objects
-
-#     @classmethod
-#     def demarcate(cls, obj, found_objects, validator):
-#         return cls(obj, {e for e in found_objects if not validator(e)}, {e for e in found_objects if validator(e)})
-
-    # def __ior__(self, other):
-    #     if self.obj != other.obj:
-    #         raise ValueError
-    #     self.invalid_objects |= other.invalid_objects
-    #     self.valid_objects |= other.valid_objects
-    #     self.ok |= other.ok
-    #     return self
+            g.draw(self.screen)
