@@ -50,7 +50,11 @@ class GameManager:
         keystate = pg.key.get_pressed()
         # events = pg.event.get()
         if not self.in_game:
+            pg.mixer.Channel(3).pause()
+            pg.mixer.Channel(7).pause()
             self.menu_update(keystate)
         else:
+            pg.mixer.Channel(3).unpause()
+            pg.mixer.Channel(7).unpause()
             self.cur_level_manager.update(keystate)
             self.screen.blit(self.cur_level_manager.screen, (0, 0))
