@@ -59,10 +59,13 @@ class GameManager:
         keystate = pg.key.get_pressed()
         self.screen.fill(BLACK)
         if not self.in_game:
-            pg.mixer.Channel(3).pause()
-            pg.mixer.Channel(7).pause()
             self.menu_update(keystate)
-            if self.result is not None:
+            if self.result is None:
+                pg.mixer.Channel(3).pause()
+                pg.mixer.Channel(7).pause()
+            elif self.result is not None:
+                pg.mixer.Channel(3).stop()
+                pg.mixer.Channel(7).stop()
                 self.cur_level = None
                 self.cur_level_manager = None
         else:
