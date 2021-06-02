@@ -24,6 +24,7 @@ class GameManager:
                     self.selected_level += i
 
             if keystate[pg.K_RETURN]:
+                self.result = None
                 self.in_game = True
                 if self.selected_level != self.cur_level:
                     try:
@@ -61,6 +62,9 @@ class GameManager:
             pg.mixer.Channel(3).pause()
             pg.mixer.Channel(7).pause()
             self.menu_update(keystate)
+            if self.result is not None:
+                self.cur_level = None
+                self.cur_level_manager = None
         else:
             pg.mixer.Channel(3).unpause()
             pg.mixer.Channel(7).unpause()
