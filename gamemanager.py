@@ -11,6 +11,7 @@ class GameManager:
         self.screen = screen
         self.font = pg.font.SysFont("verdana", 24)
         self.in_game = False
+        self.result = None
         self.level_selecting_delay = TactsCounter(count=5, cycled=False)
         pg.mixer.init(44100, -16, 1, 512)
         # self.play_sound("start")

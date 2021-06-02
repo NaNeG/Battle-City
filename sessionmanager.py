@@ -36,7 +36,6 @@ class SessionManager:
         self.sounds = self.load_sounds()
         self.play_sound("start")
         self._gm.in_game = True
-        self.result = None
 
     def change_score(self, delta):
         self.score += delta
@@ -270,11 +269,11 @@ class SessionManager:
             return
         if not self.enemies.alive:
             self._gm.in_game = False
-            self.result = WIN
+            self._gm.result = WIN
             return
         if not self.players.alive:
             self._gm.in_game = False
-            self.result = LOOSE
+            self._gm.result = LOOSE
             return
         if not self._gm.in_game:
             raise Exception()
