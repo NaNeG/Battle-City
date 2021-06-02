@@ -4,10 +4,11 @@ import pygame as pg
 from pygame.sprite import Sprite, Group, LayeredUpdates
 from map import Map
 from objects import Destructable, Tank, Projectile, Tile, Explosion, jump
-from images import green_img, concrete_img, tank_ylw_img, tank_grn_img, bricks_img, base_img, water_img
+from images import tank_ylw_img, tank_grn_img, tank_ylw2_img, tank_grn2_img, tank_bsc_img, tank_fst_img, tank_pwr_img, tank_arm_img
+from images import green_img, water_img, ice_img, bricks_img, concrete_img, base_img
 from bonuses import BonusObj
-from constants import DESTROY_ENEMIES, HEALING, POWER_UP, REPAIR_FORTRESS, SHIELD, UP, scale
-from controllers import AI, DrPlayer, Player
+from constants import DESTROY_ENEMIES, DOWN, HEALING, POWER_UP, REPAIR_FORTRESS, SHIELD, UP, scale
+from controllers import AI, Player
 from teams import Team
 
 
@@ -50,35 +51,65 @@ class SessionManager:
         return Explosion(obj.team if hasattr(obj, 'team') else None, point, total_damage, duration, self.effects, self)
 
     def shoot(self, tank):
-        return Projectile(tank.team, jump(tank.rect.center, 10*scale, tank.direction), 5, tank.direction, tank.damage, self.active, self)
+        return Projectile(tank.team, jump(tank.rect.center, 10*scale, tank.direction),
+                          tank.projectile_speed, tank.direction, tank.damage, self.active, self)
 
-    def create_tank(self, team, point, speed, delay, health, direction, damage):
-        images = tank_ylw_img, tank_grn_img
-        tank = Tank(images, team, point, speed, delay, health, direction, damage, self.active, self)
+    def create_tank(self, images, team, point, speed, delay, health, direction, projectile_speed, damage, points):
+        tank = Tank(images, team, point, speed, delay, health, direction, projectile_speed, damage, points, self.active, self)
         team.teammates.add(tank)
         return tank
 
-    def create_player_tank(self, point, speed, delay, health, direction, damage):
-        tank = self.create_tank(self.players, point, speed, delay, health, direction, damage)
-        player_buttons = [pg.K_UP, pg.K_RIGHT, pg.K_DOWN, pg.K_LEFT, pg.K_SPACE]
+    def create_player_tank(self, point, direction, player):
+        images = [(tank_ylw_img, tank_ylw2_img), (tank_grn_img, tank_grn2_img)][player - 1]
+        tank = self.create_tank(images, team=self.players,
+                                point=point, speed=4, delay=20, health=100,
+                                direction=direction, projectile_speed=7, damage=400, points=-100)
+        player_buttons = [(pg.K_UP, pg.K_RIGHT, pg.K_DOWN, pg.K_LEFT, pg.K_RCTRL),
+                          (pg.K_w, pg.K_d, pg.K_s, pg.K_a, pg.K_LSHIFT)][player - 1]
         self.players.teammates.add(tank)
         player = Player(tank, player_buttons)
         self.players.controllers.add(player)
         return player
 
-    def create_ai_tank(self, team, point, speed, delay, health, direction, damage):
-        tank = self.create_tank(team, point, speed, delay, health, direction, damage)
+    def create_ai_tank(self, images, team, point, speed, delay, health, direction, projectile_speed, damage, points):
+        tank = self.create_tank(images, team, point, speed, delay, health, direction, projectile_speed, damage, points)
         team.teammates.add(tank)
         ai = AI(tank)
         team.controllers.add(ai)
         return ai
 
+    def create_basic_enemy_tank(self, point, direction):
+        return self.create_ai_tank((tank_bsc_img,), team=self.enemies,
+                                   point=point, speed=2, delay=60, health=100,
+                                   direction=direction, projectile_speed=3, damage=200, points=100)
+
+    def create_fast_enemy_tank(self, point, direction):
+        return self.create_ai_tank((tank_fst_img,), team=self.enemies,
+                                   point=point, speed=6, delay=30, health=100,
+                                   direction=direction, projectile_speed=7, damage=400, points=200)
+
+    def create_powered_enemy_tank(self, point, direction):
+        return self.create_ai_tank((tank_pwr_img,), team=self.enemies,
+                                   point=point, speed=4, delay=20, health=100,
+                                   direction=direction, projectile_speed=10, damage=600, points=300)
+
+    def create_armor_enemy_tank(self, point, direction):
+        return self.create_ai_tank((tank_arm_img,), team=self.enemies,
+                                   point=point, speed=4, delay=30, health=400,
+                                   direction=direction, projectile_speed=7, damage=400, points=400)
+
     def create_destructable(self, image, point, health, team=None):
         return Destructable(image, point, health, self.environment, self, False, False, team)
 
-    def create_base(self, point, health):
-        self.players.base = self.create_destructable(base_img, point, health, self.players)
+    def create_base(self, point):
+        self.players.base = self.create_destructable(base_img, point, 200, self.players)
         return self.players.base
+
+    def create_bricks(self, point):
+        return self.create_destructable(bricks_img, point, 100)
+
+    def create_concrete(self, point):
+        return self.create_destructable(concrete_img, point, 300)
 
     def create_green(self, point):
         return Tile(green_img, point, self.effects, self, True, True)
@@ -87,7 +118,7 @@ class SessionManager:
         return Tile(water_img, point, self.environment, self, False, True)
 
     def create_ice(self, point):
-        return Tile(water_img, point, self.environment, self, True, True, 40)
+        return Tile(ice_img, point, self.environment, self, True, True, 22)
 
     def create_bonus(self, point, type):
         return BonusObj(point, type, self.effects, self)
@@ -104,7 +135,7 @@ class SessionManager:
         if bonus == POWER_UP:
             pass
         if bonus == HEALING:
-            pass
+            aim.health += 50
 
     def parse_map(self, str_map, above_existing=False):
         if not above_existing:
@@ -122,22 +153,34 @@ class SessionManager:
 
     def create_by_sign(self, s, point):
         square_size = 16 * scale
-        if s == 'P':
-            return self.create_player_tank(point, speed=2, delay=20, health=100, direction=UP, damage=400)
-        if s == 'E':
-            return self.create_ai_tank(self.enemies, point, speed=2, delay=20, health=100, direction=UP, damage=400)
+        if s == '1':
+            return self.create_player_tank(point, UP, 1)
+        if s == '2':
+            return self.create_player_tank(point, UP, 2)
+        if s == 'B':
+            return self.create_basic_enemy_tank(point, DOWN)
         if s == 'F':
-            return self.create_base(point, 100)
+            return self.create_fast_enemy_tank(point, DOWN)
+        if s == 'P':
+            return self.create_powered_enemy_tank(point, DOWN)
+        if s == 'A':
+            return self.create_armor_enemy_tank(point, DOWN)
+        if s == '0':
+            return self.create_base(point)
 
         a,b,c,d = ((point[0] + s1 * square_size//2,
                     point[1] + s2 * square_size//2)
                     for s1 in (0,1) for s2 in (0,1))
-        if s == 'B':
-            return [self.create_destructable(bricks_img, point, 100) for point in (a,b,c,d)]
-        if s == 'G':
+        if s == '#':
+            return [self.create_bricks(point) for point in (a,b,c,d)]
+        if s == '+':
+            return [self.create_concrete(point) for point in (a,b,c,d)]
+        if s == '"':
             return [self.create_green(point) for point in (a,b,c,d)]
-        if s == 'W':
+        if s == '~':
             return [self.create_water(point) for point in (a,b,c,d)]
+        if s == '*':
+            return [self.create_ice(point) for point in (a,b,c,d)]
 
     def load_sounds(self):
         sounds = {}

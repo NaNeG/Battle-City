@@ -57,7 +57,7 @@ class Movable:
 
 
 class Tank(Sprite, Movable):
-    def __init__(self, images, team, point, speed, delay, health, direction, damage, group, session_manager):
+    def __init__(self, images, team, point, speed, delay, health, direction, projectile_speed, damage, points, group, session_manager):
         super().__init__(group)
         self.images = [img_rotations(img) for img in images]
         self.anim_tacts_counter = TactsCounter(count=len(self.images), tact_length=5)
@@ -68,7 +68,9 @@ class Tank(Sprite, Movable):
         self.speed = speed
         self.health = health
         self.team = team
+        self.projectile_speed = projectile_speed
         self.damage = damage
+        self.points = points
         self._sm = session_manager
 
         self.shooting_delayer = TactsCounter(count=delay, cycled=False)

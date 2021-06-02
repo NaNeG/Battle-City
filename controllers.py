@@ -1,6 +1,6 @@
 from collections import deque
 from tactscounter import TactsCounter
-from random import choices, randrange, choice, random, randint
+from random import choices, choice, randint
 from constants import *
 
 
@@ -11,18 +11,6 @@ class Player:
 
     def update(self, keystate):
         self.tank.controls = [keystate[e] for e in self.buttons]
-
-
-class DrPlayer(Player):
-    _slowed = 15
-    def __init__(self, tank, buttons):
-        self._q = deque()
-        super().__init__(tank, buttons)
-
-    def update(self, keystate):
-        self._q.append([keystate[e] for e in self.buttons])
-        if len(self._q) >= DrPlayer._slowed:
-            self.tank.controls = self._q.popleft()
 
 
 class AI:

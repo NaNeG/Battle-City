@@ -10,7 +10,8 @@ fps = 30
 # pathes
 game_folder = _os.path.dirname(__file__)
 img_folder = _os.path.join(game_folder, 'images')
-img_path = _os.path.join(img_folder, 'sprites.gif')
+img1_path = _os.path.join(img_folder, 'sprites.gif')
+img2_path = _os.path.join(img_folder, 'sprites2.jpg')
 
 
 # colors
