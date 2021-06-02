@@ -23,7 +23,6 @@ class SessionManager:
         self.sounds = self.load_sounds()
         self.play_sound("start")
 
-        self.keystate = []
         self.cheat_tacts_counter = TactsCounter(count=0, tact_length=1, cycled=False)
         self.required_keys = [False] * 5
         self._map = map
@@ -168,21 +167,21 @@ class SessionManager:
         if not pg.mixer.Channel(3).get_busy():
             channel.play(s)
 
-    def cheat_code(self):
+    def cheat_code(self, keystate):
         self.cheat_tacts_counter.update()
-        if self.keystate[pg.K_c] and not self.required_keys[0]:
+        if keystate[pg.K_c] and not self.required_keys[0]:
             self.required_keys[0] = True
             self.cheat_tacts_counter = TactsCounter(count=45, tact_length=1, cycled=False)
-        if self.keystate[pg.K_h] and self.required_keys[0] and not self.required_keys[1]:
+        if keystate[pg.K_h] and self.required_keys[0] and not self.required_keys[1]:
             self.required_keys[1] = True
             self.cheat_tacts_counter = TactsCounter(count=45, tact_length=1, cycled=False)
-        if self.keystate[pg.K_e] and self.required_keys[1] and not self.required_keys[2]:
+        if keystate[pg.K_e] and self.required_keys[1] and not self.required_keys[2]:
             self.required_keys[2] = True
             self.cheat_tacts_counter = TactsCounter(count=45, tact_length=1, cycled=False)
-        if self.keystate[pg.K_a] and self.required_keys[2] and not self.required_keys[3]:
+        if keystate[pg.K_a] and self.required_keys[2] and not self.required_keys[3]:
             self.required_keys[3] = True
             self.cheat_tacts_counter = TactsCounter(count=45, tact_length=1, cycled=False)
-        if self.keystate[pg.K_t] and self.required_keys[3] and not self.required_keys[4]:
+        if keystate[pg.K_t] and self.required_keys[3] and not self.required_keys[4]:
             self.required_keys[4] = True
             self.cheat_tacts_counter = TactsCounter(count=45, tact_length=1, cycled=False)
         elif self.cheat_tacts_counter.tact >= 44:
@@ -197,8 +196,7 @@ class SessionManager:
 
 
     def update(self, keystate):
-        self.keystate = keystate
-        self.cheat_code()
+        self.cheat_code(keystate)
         for t in self.players, self.enemies:
             t.update(keystate)
         for g in self.environment, self.active, self.effects:
