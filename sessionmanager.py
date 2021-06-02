@@ -196,10 +196,13 @@ class SessionManager:
         sounds["explosion"] = pg.mixer.Sound("sounds/sounds_explosion.ogg")
         sounds["brick"] = pg.mixer.Sound("sounds/sounds_brick.ogg")
         sounds["steel"] = pg.mixer.Sound("sounds/sounds_steel.ogg")
+        sounds["music"] = pg.mixer.Sound("sounds/music.mp3")
         return sounds
 
     def play_sound(self, sound):
         s = self.sounds[sound]
+        music = self.sounds["music"]
+        music_channel = pg.mixer.Channel(7)
         channel = pg.mixer.Channel(1)
         if sound == "bg":
             channel = pg.mixer.Channel(2)
@@ -209,6 +212,9 @@ class SessionManager:
             channel = pg.mixer.Channel(4)
         if not pg.mixer.Channel(3).get_busy():
             channel.play(s)
+        if not music_channel.get_busy() and not pg.mixer.Channel(3).get_busy():
+            music_channel.set_volume(0.3)
+            music_channel.play(music, loops=-1, fade_ms=1000)
 
     def update_cheat_code(self, keystate):
         self.cheat_tacts_counter.update()
