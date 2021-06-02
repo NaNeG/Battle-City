@@ -14,7 +14,6 @@ class GameManager:
         self.result = None
         self.level_selecting_delay = TactsCounter(count=5, cycled=False)
         pg.mixer.init(44100, -16, 1, 512)
-        # self.play_sound("start")
 
     def menu_update(self, keystate):
         self.level_selecting_delay.update()
@@ -49,9 +48,9 @@ class GameManager:
             True, WHITE)
         self.screen.blit(text, (screen_size[0]//8, screen_size[1]//4))
 
-        if self.cur_level_manager is not None and self.cur_level_manager.result is not None:
+        if self.result is not None:
             text = self.font.render(
-                "Победа" if self.cur_level_manager.result == WIN else "Поражение",
+                "Победа" if self.result == WIN else "Поражение",
                 True, WHITE)
             self.screen.blit(text, (screen_size[0]//8, 3*screen_size[1]//8))
 
