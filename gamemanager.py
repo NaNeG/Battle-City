@@ -1,6 +1,6 @@
 import pygame as pg
 from sessionmanager import SessionManager
-from constants import WHITE, screen_size, BLACK
+from constants import WHITE, WIN, screen_size, BLACK
 from tactscounter import TactsCounter
 
 class GameManager:
@@ -48,9 +48,14 @@ class GameManager:
             True, WHITE)
         self.screen.blit(text, (screen_size[0]//8, screen_size[1]//4))
 
+        if self.cur_level_manager is not None and self.cur_level_manager.result is not None:
+            text = self.font.render(
+                "Победа" if self.cur_level_manager.result == WIN else "Поражение",
+                True, WHITE)
+            self.screen.blit(text, (screen_size[0]//8, 3*screen_size[1]//8))
+
     def update(self):
         keystate = pg.key.get_pressed()
-        # events = pg.event.get()
         self.screen.fill(BLACK)
         if not self.in_game:
             pg.mixer.Channel(3).pause()

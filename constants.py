@@ -28,3 +28,6 @@ BLUE = (0, 0, 255)
 
 # bonuses
 (SHIELD, DESTROY_ENEMIES, REPAIR_FORTRESS, POWER_UP, HEALING, SCORE) = range(6)
+
+# game results
+(WIN, LOOSE) = range(2)

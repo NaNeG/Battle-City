@@ -8,7 +8,7 @@ from images import tank_ylw_img, tank_grn_img, tank_ylw2_img, tank_grn2_img, tan
 from images import green_img, water_img, ice_img, bricks_img, concrete_img, base_img
 from bonuses import BonusObj
 from tactscounter import TactsCounter
-from constants import BLACK, DESTROY_ENEMIES, DOWN, GREEN, HEALING, POWER_UP, REPAIR_FORTRESS, SHIELD, UP, WHITE, SCORE, scale, screen_size
+from constants import BLACK, DESTROY_ENEMIES, DOWN, GREEN, HEALING, LOOSE, POWER_UP, REPAIR_FORTRESS, SHIELD, UP, WHITE, SCORE, WIN, scale, screen_size
 from controllers import AI, Player
 from teams import Team
 
@@ -36,6 +36,7 @@ class SessionManager:
         self.sounds = self.load_sounds()
         self.play_sound("start")
         self._gm.in_game = True
+        self.result = None
 
     def change_score(self, delta):
         self.score += delta
@@ -261,6 +262,14 @@ class SessionManager:
     def update(self, keystate):
         if keystate[pg.K_ESCAPE]:
             self._gm.in_game = False
+            return
+        if not self.enemies.alive:
+            self._gm.in_game = False
+            self.result = WIN
+            return
+        if not self.players.alive:
+            self._gm.in_game = False
+            self.result = LOOSE
             return
         if not self._gm.in_game:
             raise Exception()
