@@ -223,7 +223,7 @@ class SessionManager:
             channel.play(s)
         if not music_channel.get_busy() and not pg.mixer.Channel(3).get_busy():
             music_channel.set_volume(0.3)
-            music_channel.play(music, loops=-1, fade_ms=1000)
+            music_channel.play(music, loops=-1, fade_ms=2000)
 
     def update_cheat_code(self, keystate):
         self.cheat_tacts_counter.update()

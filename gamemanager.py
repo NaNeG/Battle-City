@@ -53,8 +53,12 @@ class GameManager:
         # events = pg.event.get()
         self.screen.fill(BLACK)
         if not self.in_game:
+            pg.mixer.Channel(3).pause()
+            pg.mixer.Channel(7).pause()
             self.menu_update(keystate)
         else:
+            pg.mixer.Channel(3).unpause()
+            pg.mixer.Channel(7).unpause()
             self.cur_level_manager.update(keystate)
             self.screen.blit(self.cur_level_manager.map_screen, (0, 0))
             self.screen.blit(self.cur_level_manager.info_screen, (0.1, 0.9 * screen_size[1]))
