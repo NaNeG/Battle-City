@@ -1,4 +1,4 @@
-from typing import Union
+from math import ceil, tan
 from pygame import Rect, Surface
 import pygame as pg
 from pygame.sprite import Sprite, Group, LayeredUpdates
@@ -8,7 +8,7 @@ from images import tank_ylw_img, tank_grn_img, tank_ylw2_img, tank_grn2_img, tan
 from images import green_img, water_img, ice_img, bricks_img, concrete_img, base_img
 from bonuses import BonusObj
 from tactscounter import TactsCounter
-from constants import BLACK, DESTROY_ENEMIES, DOWN, HEALING, POWER_UP, REPAIR_FORTRESS, SHIELD, UP, scale, screen_size
+from constants import BLACK, DESTROY_ENEMIES, DOWN, GREEN, HEALING, POWER_UP, REPAIR_FORTRESS, SHIELD, UP, WHITE, scale, screen_size
 from controllers import AI, Player
 from teams import Team
 
@@ -23,10 +23,12 @@ class SessionManager:
         self.players = Team()
         self.enemies = Team()
 
+        self.score = 0
+
         self.cheat_tacts_counter = TactsCounter(count=45, tact_length=1, cycled=False)
         self.required_keys = [False] * 5
 
-        self.screen = Surface((screen_size[0], 0.8 * screen_size[1]))
+        self.map_screen = Surface((screen_size[0], 0.8 * screen_size[1]))
 
         self._map = Map(screen_size=(screen_size[0], 0.8 * screen_size[1]))
         self.parse_map(txt_map)
@@ -35,8 +37,8 @@ class SessionManager:
         self.play_sound("start")
         self._gm.in_game = True
 
-    # def jump(self, obj: Sprite, newrect: Rect, oldrect: Rect=None):
-    #     return self._map.jump(obj, newrect, oldrect)
+    def change_score(self, delta):
+        self.score += delta
 
     def move(self, obj: Sprite, newrect: Rect, oldrect: Rect=None, validator=lambda obj: False):
         if oldrect is None:
@@ -61,11 +63,11 @@ class SessionManager:
         return Explosion(obj.team if hasattr(obj, 'team') else None, point, total_damage, duration, self.effects, self)
 
     def shoot(self, tank):
-        return Projectile(tank.team, jump(tank.rect.center, 1.5*tank.projectile_speed*scale, tank.direction),
+        return Projectile(tank.team, jump(tank.rect.center, ceil(max(tank.rect.size) / 2) + tank.speed + 8, tank.direction),
                           tank.projectile_speed, tank.direction, tank.damage, self.active, self)
 
-    def create_tank(self, images, team, point, speed, delay, health, direction, projectile_speed, damage, points):
-        tank = Tank(images, team, point, speed, delay, health, direction, projectile_speed, damage, points, self.active, self)
+    def create_tank(self, images, team, point, speed, delay, health, direction, projectile_speed, damage, score):
+        tank = Tank(images, team, point, speed, delay, health, direction, projectile_speed, damage, score, self.active, self)
         team.teammates.add(tank)
         return tank
 
@@ -73,7 +75,7 @@ class SessionManager:
         images = [(tank_ylw_img, tank_ylw2_img), (tank_grn_img, tank_grn2_img)][player - 1]
         tank = self.create_tank(images, team=self.players,
                                 point=point, speed=4, delay=20, health=100,
-                                direction=direction, projectile_speed=7, damage=400, points=-100)
+                                direction=direction, projectile_speed=7, damage=300, score=-100)
         player_buttons = [(pg.K_UP, pg.K_RIGHT, pg.K_DOWN, pg.K_LEFT, pg.K_RCTRL),
                           (pg.K_w, pg.K_d, pg.K_s, pg.K_a, pg.K_LSHIFT)][player - 1]
         self.players.teammates.add(tank)
@@ -81,8 +83,8 @@ class SessionManager:
         self.players.controllers.add(player)
         return player
 
-    def create_ai_tank(self, images, team, point, speed, delay, health, direction, projectile_speed, damage, points):
-        tank = self.create_tank(images, team, point, speed, delay, health, direction, projectile_speed, damage, points)
+    def create_ai_tank(self, images, team, point, speed, delay, health, direction, projectile_speed, damage, score):
+        tank = self.create_tank(images, team, point, speed, delay, health, direction, projectile_speed, damage, score)
         team.teammates.add(tank)
         ai = AI(tank)
         team.controllers.add(ai)
@@ -91,28 +93,28 @@ class SessionManager:
     def create_basic_enemy_tank(self, point, direction):
         return self.create_ai_tank((tank_bsc_img,), team=self.enemies,
                                    point=point, speed=2, delay=60, health=100,
-                                   direction=direction, projectile_speed=3, damage=200, points=100)
+                                   direction=direction, projectile_speed=3, damage=150, score=100)
 
     def create_fast_enemy_tank(self, point, direction):
         return self.create_ai_tank((tank_fst_img,), team=self.enemies,
                                    point=point, speed=6, delay=30, health=100,
-                                   direction=direction, projectile_speed=8, damage=400, points=200)
+                                   direction=direction, projectile_speed=8, damage=300, score=200)
 
     def create_powered_enemy_tank(self, point, direction):
         return self.create_ai_tank((tank_pwr_img,), team=self.enemies,
                                    point=point, speed=4, delay=20, health=100,
-                                   direction=direction, projectile_speed=10, damage=600, points=300)
+                                   direction=direction, projectile_speed=10, damage=450, score=300)
 
     def create_armor_enemy_tank(self, point, direction):
         return self.create_ai_tank((tank_arm_img,), team=self.enemies,
                                    point=point, speed=4, delay=30, health=400,
-                                   direction=direction, projectile_speed=7, damage=400, points=400)
+                                   direction=direction, projectile_speed=7, damage=300, score=400)
 
-    def create_destructable(self, image, point, health, team=None):
-        return Destructable(image, point, health, self.environment, self, False, False, team)
+    def create_destructable(self, image, point, health, team=None, score=0):
+        return Destructable(image, point, health, self.environment, self, False, False, team, score)
 
     def create_base(self, point):
-        self.players.base = self.create_destructable(base_img, point, 200, self.players)
+        self.players.base = self.create_destructable(base_img, point, 200, self.players, -1300)
         return self.players.base
 
     def create_bricks(self, point):
@@ -237,13 +239,23 @@ class SessionManager:
         if all(self.required_keys):
             self.enemies.kill()
 
+    def update_info_screen(self):
+        players_healthes = 'HP: ' + ', '.join(f'{e.health:.2f}' for e in self.players.teammates)
+        base_health = f'BASE: {self.players.base.health:.2f}'
+        score = 'SCORE: ' + str(self.score)
+        self.info_screen = self._gm.font.render('   '.join((players_healthes, base_health, score)), True, WHITE, GREEN)
+
+    def update_map_screen(self):
+        self.map_screen.fill(BLACK)
+        for g in self.environment, self.active, self.effects:
+            g.draw(self.map_screen)
 
     def update(self, keystate):
         if keystate[pg.K_ESCAPE]:
             self._gm.in_game = False
             return
         if not self._gm.in_game:
-            Exception()
+            raise Exception()
 
         self.update_cheat_code(keystate)
 
@@ -252,9 +264,5 @@ class SessionManager:
         for g in self.environment, self.active, self.effects:
             g.update()
 
-        self.screen.fill(BLACK)
-        self.draw()
-
-    def draw(self):
-        for g in self.environment, self.active, self.effects:
-            g.draw(self.screen)
+        self.update_info_screen()
+        self.update_map_screen()

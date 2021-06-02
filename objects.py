@@ -57,7 +57,7 @@ class Movable:
 
 
 class Tank(Sprite, Movable):
-    def __init__(self, images, team, point, speed, delay, health, direction, projectile_speed, damage, points, group, session_manager):
+    def __init__(self, images, team, point, speed, delay, health, direction, projectile_speed, damage, score, group, session_manager):
         super().__init__(group)
         self.images = [img_rotations(img) for img in images]
         self.anim_tacts_counter = TactsCounter(count=len(self.images), tact_length=5)
@@ -70,7 +70,7 @@ class Tank(Sprite, Movable):
         self.team = team
         self.projectile_speed = projectile_speed
         self.damage = damage
-        self.points = points
+        self.score = score
         self._sm = session_manager
 
         self.shooting_delayer = TactsCounter(count=delay, cycled=False)
@@ -137,12 +137,6 @@ class Tank(Sprite, Movable):
 
     def collide(self, *others):
         self.sliding = max([0, *(e.slipperiness for e in others if isinstance(e, Tile))])
-        # for e in others:
-        #     if isinstance(e, Tile) and e.is_slippy:
-        #         self.sliding = 12
-        #         break
-        # else:
-        #     self.sliding = 0
 
     def get_harmed(self, *others):
         for e in others:
@@ -154,6 +148,7 @@ class Tank(Sprite, Movable):
         self.health = 0
         super().kill()
         self._sm.outdate(self)
+        self._sm.change_score(self.score)
         self._sm.create_explosion(None, self.rect.center, 0, 12)
 
 
@@ -272,10 +267,11 @@ class Tile(Sprite):
 
 
 class Destructable(Tile):
-    def __init__(self, image, point, health, group, session_manager, is_walkable=False, is_flyable=False, team=None):
+    def __init__(self, image, point, health, group, session_manager, is_walkable=False, is_flyable=False, team=None, score=0):
         super().__init__(image, point, group, session_manager, is_walkable, is_flyable)
         self.health = health
         self.team = team
+        self.score = score
 
     def update(self):
         if self.health <= 0:
@@ -287,6 +283,7 @@ class Destructable(Tile):
 
     def kill(self):
         super().kill()
+        self._sm.change_score(self.score)
         self.health = 0
 
 
