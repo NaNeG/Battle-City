@@ -192,6 +192,8 @@ class Projectile(Sprite, Movable):
                 self.health = 0
             elif not self.can_walk_on(e):
                 self.health -= e.damage
+            if not pg.mixer.Channel(4).get_busy() and issolid(e) and not isinstance(e, Projectile):
+                self._sm.play_sound("explosion")
 
     collide = get_harmed
 
