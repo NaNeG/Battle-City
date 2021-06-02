@@ -154,7 +154,7 @@ class Tank(Sprite, Movable):
         self.health = 0
         super().kill()
         self._sm.outdate(self)
-        self._sm.create_explosion(None, self.rect.center, 0, 6)
+        self._sm.create_explosion(None, self.rect.center, 0, 12)
 
 
 class Projectile(Sprite, Movable):
@@ -192,8 +192,8 @@ class Projectile(Sprite, Movable):
                 self.health = 0
             elif not self.can_walk_on(e):
                 self.health -= e.damage
-            if not pg.mixer.Channel(4).get_busy() and issolid(e) and not isinstance(e, Projectile):
-                self._sm.play_sound("explosion")
+            # if not pg.mixer.Channel(4).get_busy() and issolid(e) and not isinstance(e, Projectile):
+            #     self._sm.play_sound("explosion")
 
     collide = get_harmed
 
@@ -221,6 +221,9 @@ class Explosion(Sprite):
         self.total_damage = total_damage
         self.duration = duration
         self._sm = session_manager
+
+        if not pg.mixer.Channel(4).get_busy():
+            self._sm.play_sound("explosion")
 
     @property
     def image(self):

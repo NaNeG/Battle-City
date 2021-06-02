@@ -24,7 +24,7 @@ class SessionManager:
         self.sounds = self.load_sounds()
         self.play_sound("start")
 
-        self.cheat_tacts_counter = TactsCounter(count=0, tact_length=1, cycled=False)
+        self.cheat_tacts_counter = TactsCounter(count=45, tact_length=1, cycled=False)
         self.required_keys = [False] * 5
         self._map = map
 
@@ -54,7 +54,7 @@ class SessionManager:
         return Explosion(obj.team if hasattr(obj, 'team') else None, point, total_damage, duration, self.effects, self)
 
     def shoot(self, tank):
-        return Projectile(tank.team, jump(tank.rect.center, 10*scale, tank.direction),
+        return Projectile(tank.team, jump(tank.rect.center, 1.5*tank.projectile_speed*scale, tank.direction),
                           tank.projectile_speed, tank.direction, tank.damage, self.active, self)
 
     def create_tank(self, images, team, point, speed, delay, health, direction, projectile_speed, damage, points):
@@ -89,7 +89,7 @@ class SessionManager:
     def create_fast_enemy_tank(self, point, direction):
         return self.create_ai_tank((tank_fst_img,), team=self.enemies,
                                    point=point, speed=6, delay=30, health=100,
-                                   direction=direction, projectile_speed=7, damage=400, points=200)
+                                   direction=direction, projectile_speed=8, damage=400, points=200)
 
     def create_powered_enemy_tank(self, point, direction):
         return self.create_ai_tank((tank_pwr_img,), team=self.enemies,
@@ -210,36 +210,23 @@ class SessionManager:
         if not pg.mixer.Channel(3).get_busy():
             channel.play(s)
 
-    def cheat_code(self, keystate):
+    def update_cheat_code(self, keystate):
         self.cheat_tacts_counter.update()
-        if keystate[pg.K_c] and not self.required_keys[0]:
-            self.required_keys[0] = True
-            self.cheat_tacts_counter = TactsCounter(count=45, tact_length=1, cycled=False)
-        if keystate[pg.K_h] and self.required_keys[0] and not self.required_keys[1]:
-            self.required_keys[1] = True
-            self.cheat_tacts_counter = TactsCounter(count=45, tact_length=1, cycled=False)
-        if keystate[pg.K_e] and self.required_keys[1] and not self.required_keys[2]:
-            self.required_keys[2] = True
-            self.cheat_tacts_counter = TactsCounter(count=45, tact_length=1, cycled=False)
-        if keystate[pg.K_a] and self.required_keys[2] and not self.required_keys[3]:
-            self.required_keys[3] = True
-            self.cheat_tacts_counter = TactsCounter(count=45, tact_length=1, cycled=False)
-        if keystate[pg.K_t] and self.required_keys[3] and not self.required_keys[4]:
-            self.required_keys[4] = True
-            self.cheat_tacts_counter = TactsCounter(count=45, tact_length=1, cycled=False)
-        elif self.cheat_tacts_counter.tact >= 44:
+        for i, k in enumerate([pg.K_c, pg.K_h, pg.K_e, pg.K_a, pg.K_t]):
+            if keystate[k] and (i == 0 or self.required_keys[i - 1]) and not self.required_keys[i]:
+                self.required_keys[i] = True
+                self.cheat_tacts_counter.reset()
+
+        if self.cheat_tacts_counter.stopped:
             self.required_keys = [False] * 5
-            self.cheat_tacts_counter = TactsCounter(count=0, tact_length=1, cycled=False)
+            self.cheat_tacts_counter.reset()
 
-        print(self.cheat_tacts_counter.tact)
-        print(self.required_keys)
-
-        if self.required_keys[0] and self.required_keys[1] and self.required_keys[2] and self.required_keys[3] and self.required_keys[4]:
+        if all(self.required_keys):
             self.enemies.kill()
 
 
     def update(self, keystate):
-        self.cheat_code(keystate)
+        self.update_cheat_code(keystate)
         for t in self.players, self.enemies:
             t.update(keystate)
         for g in self.environment, self.active, self.effects:

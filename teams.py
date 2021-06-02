@@ -18,4 +18,5 @@ class Team:
 
     def kill(self):
         for e in self.teammates:
-            e.kill()
+            if e.health > 0:
+                e.kill()
