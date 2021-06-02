@@ -8,7 +8,7 @@ from images import tank_ylw_img, tank_grn_img, tank_ylw2_img, tank_grn2_img, tan
 from images import green_img, water_img, ice_img, bricks_img, concrete_img, base_img
 from bonuses import BonusObj
 from tactscounter import TactsCounter
-from constants import BLACK, DESTROY_ENEMIES, DOWN, GREEN, HEALING, POWER_UP, REPAIR_FORTRESS, SHIELD, UP, WHITE, scale, screen_size
+from constants import BLACK, DESTROY_ENEMIES, DOWN, GREEN, HEALING, POWER_UP, REPAIR_FORTRESS, SHIELD, UP, WHITE, SCORE, scale, screen_size
 from controllers import AI, Player
 from teams import Team
 
@@ -143,11 +143,13 @@ class SessionManager:
                 self.enemies.kill()
         if bonus == REPAIR_FORTRESS:
             if aim.team == self.players and self.players.base is not None:
-                self.players.base.health = 100
+                self.players.base.health = 200
         if bonus == POWER_UP:
             pass
         if bonus == HEALING:
             aim.health += 50
+        if bonus == SCORE:
+            self.score += 100
 
     def parse_map(self, str_map, above_existing=False):
         if not above_existing:
@@ -193,6 +195,12 @@ class SessionManager:
             return [self.create_water(point) for point in (a,b,c,d)]
         if s == '*':
             return [self.create_ice(point) for point in (a,b,c,d)]
+        if s == 'Q':
+            return self.create_bonus(point, REPAIR_FORTRESS)
+        if s == 'W':
+            return self.create_bonus(point, HEALING)
+        if s == 'E':
+            return self.create_bonus(point, SCORE)
 
     def load_sounds(self):
         return {
